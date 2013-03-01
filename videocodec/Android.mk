@@ -1,15 +1,15 @@
 ifeq ($(strip $(BOARD_USES_WRS_OMXIL_CORE)),true)
 LOCAL_PATH := $(call my-dir)
 
-ifeq ($(TARGET_DEVICE),mfld_gi)
+ifeq ($(REF_PRODUCT_NAME),mfld_gi)
 LOCAL_C_FLAGS := -DMFLD_GI
-else ifneq (,$(findstring $(TARGET_DEVICE),mfld_dv10 redridge salitpa))
+else ifneq (,$(findstring $(REF_PRODUCT_NAME),salitpa))
 LOCAL_C_FLAGS := -DMFLD_DV10
-else ifneq (,$(findstring $(TARGET_DEVICE),victoriabay ctp_pr1 ctp_nomodem))
+else ifneq (,$(findstring $(REF_PRODUCT_NAME),victoriabay redhookbay))
 LOCAL_C_FLAGS := -DCLVT
-else ifeq ($(TARGET_DEVICE), mrfl_vp)
+else ifeq ($(REF_PRODUCT_NAME), mrfl_vp)
 LOCAL_C_FLAGS := -DMRFL_VP
-else ifeq ($(TARGET_DEVICE),yukkabeach)
+else ifeq ($(REF_PRODUCT_NAME),yukkabeach)
 LOCAL_C_FLAGS := -DYUKKA
 else
 LOCAL_C_FLAGS := -DMFLD_PR2
@@ -389,12 +389,7 @@ endif
 include $(BUILD_SHARED_LIBRARY)
 
 # Add source codes for Merrifield
-MERRIFIELD_PRODUCT := \
-        mrfl_vp \
-        mrfl_hvp \
-        mrfl_sle \
-        merr_vv
-ifneq ($(filter $(TARGET_PRODUCT),$(MERRIFIELD_PRODUCT)),)
+ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
 include $(CLEAR_VARS)
 LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
