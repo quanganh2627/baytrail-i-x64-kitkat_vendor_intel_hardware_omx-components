@@ -1,15 +1,15 @@
 ifeq ($(strip $(BOARD_USES_WRS_OMXIL_CORE)),true)
 LOCAL_PATH := $(call my-dir)
 
-ifeq ($(REF_PRODUCT_NAME),mfld_gi)
+ifeq ($(TARGET_DEVICE),mfld_gi)
 LOCAL_C_FLAGS := -DMFLD_GI
-else ifneq (,$(findstring $(REF_PRODUCT_NAME),salitpa))
+else ifneq (,$(findstring $(TARGET_DEVICE),mfld_dv10 redridge salitpa))
 LOCAL_C_FLAGS := -DMFLD_DV10
-else ifneq (,$(findstring $(REF_PRODUCT_NAME),victoriabay redhookbay))
+else ifneq (,$(findstring $(TARGET_DEVICE),victoriabay ctp_pr1 ctp_nomodem))
 LOCAL_C_FLAGS := -DCLVT
-else ifeq ($(REF_PRODUCT_NAME), mrfl_vp)
+else ifeq ($(TARGET_DEVICE), mrfl_vp)
 LOCAL_C_FLAGS := -DMRFL_VP
-else ifeq ($(REF_PRODUCT_NAME),yukkabeach)
+else ifeq ($(TARGET_DEVICE),yukkabeach)
 LOCAL_C_FLAGS := -DYUKKA
 else
 LOCAL_C_FLAGS := -DMFLD_PR2
