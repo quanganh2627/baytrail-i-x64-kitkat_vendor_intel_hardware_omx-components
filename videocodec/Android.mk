@@ -1,18 +1,8 @@
 ifeq ($(strip $(BOARD_USES_WRS_OMXIL_CORE)),true)
 LOCAL_PATH := $(call my-dir)
 
-ifeq ($(REF_PRODUCT_NAME),mfld_gi)
-LOCAL_C_FLAGS := -DMFLD_GI
-else ifneq (,$(findstring $(REF_PRODUCT_NAME),salitpa))
-LOCAL_C_FLAGS := -DMFLD_DV10
-else ifneq (,$(findstring $(REF_PRODUCT_NAME),victoriabay redhookbay))
-LOCAL_C_FLAGS := -DCLVT
-else ifeq ($(REF_PRODUCT_NAME), mrfl_vp)
-LOCAL_C_FLAGS := -DMRFL_VP
-else ifeq ($(REF_PRODUCT_NAME),yukkabeach)
-LOCAL_C_FLAGS := -DYUKKA
-else
-LOCAL_C_FLAGS := -DMFLD_PR2
+ifeq ($(strip $(USE_VIDEO_EFFECT)),true)
+LOCAL_C_FLAGS := -DUSE_VIDEO_EFFECT
 endif
 
 include $(CLEAR_VARS)
@@ -49,6 +39,37 @@ endif
 
 include $(BUILD_SHARED_LIBRARY)
 
+# Add source codes for Merrifield
+ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
+include $(CLEAR_VARS)
+LOCAL_CPPFLAGS :=
+LOCAL_LDFLAGS :=
+
+LOCAL_SHARED_LIBRARIES := \
+    libwrs_omxil_common \
+    libva_videodecoder \
+    liblog \
+    libva \
+    libva-android
+
+LOCAL_C_INCLUDES := \
+    $(TARGET_OUT_HEADERS)/wrs_omxil_core \
+    $(TARGET_OUT_HEADERS)/khronos/openmax \
+    $(PV_INCLUDES) \
+    $(TARGET_OUT_HEADERS)/libmix_videodecoder \
+    $(TARGET_OUT_HEADERS)/libva \
+    $(TOP)/frameworks/native/include/media/hardware \
+    $(TOP)/frameworks/native/include/media/openmax
+
+LOCAL_SRC_FILES := \
+    OMXComponentCodecBase.cpp\
+    OMXVideoDecoderBase.cpp\
+    OMXVideoDecoderVP8.cpp
+
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := libOMXVideoDecoderVP8
+include $(BUILD_SHARED_LIBRARY)
+endif
 
 include $(CLEAR_VARS)
 
@@ -387,42 +408,5 @@ LOCAL_CFLAGS += -DVED_TILING
 endif
 
 include $(BUILD_SHARED_LIBRARY)
-
-# Add source codes for Merrifield
-MERRIFIELD_PRODUCT := \
-        mrfl_vp \
-        mrfl_hvp \
-        mrfl_sle \
-        merr_vv
-ifneq ($(filter $(TARGET_PRODUCT),$(MERRIFIELD_PRODUCT)),)
-include $(CLEAR_VARS)
-LOCAL_CPPFLAGS :=
-LOCAL_LDFLAGS :=
-
-LOCAL_SHARED_LIBRARIES := \
-    libwrs_omxil_common \
-    libva_videodecoder \
-    liblog \
-    libva \
-    libva-android
-
-LOCAL_C_INCLUDES := \
-    $(TARGET_OUT_HEADERS)/wrs_omxil_core \
-    $(TARGET_OUT_HEADERS)/khronos/openmax \
-    $(PV_INCLUDES) \
-    $(TARGET_OUT_HEADERS)/libmix_videodecoder \
-    $(TARGET_OUT_HEADERS)/libva \
-    $(TOP)/frameworks/native/include/media/hardware \
-    $(TOP)/frameworks/native/include/media/openmax
-
-LOCAL_SRC_FILES := \
-    OMXComponentCodecBase.cpp\
-    OMXVideoDecoderBase.cpp\
-    OMXVideoDecoderVP8.cpp
-
-LOCAL_MODULE_TAGS := optional
-LOCAL_MODULE := libOMXVideoDecoderVP8
-include $(BUILD_SHARED_LIBRARY)
-endif
 
 endif
