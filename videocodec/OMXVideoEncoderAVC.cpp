@@ -112,6 +112,8 @@ OMXVideoEncoderAVC::OMXVideoEncoderAVC() {
             LOGV("Support Profile:%s, Level:%s\n", ProfileTable[profile_index].name, LevelTable[level_index].name);
         }
     }
+
+    mSourceType = MetadataBufferTypeCameraSource;
 }
 
 OMXVideoEncoderAVC::~OMXVideoEncoderAVC() {
@@ -293,6 +295,24 @@ OMX_ERRORTYPE OMXVideoEncoderAVC::ProcessorPreEmptyBuffer(OMX_BUFFERHEADERTYPE* 
     bool BFrameEnabled = IpPeriod > 1;
     uint32_t GOP = 0;
 
+    //extract SourceType from first frame in MetadataMode
+    if (mStoreMetaDataInBuffers && (mInputPictureCount == 0)) {
+        uint8_t* bytes = buffer->pBuffer + buffer->nOffset;
+        uint32_t size = buffer->nFilledLen;
+
+        IntelMetadataBuffer* buf = NULL;
+        if ((buf = new IntelMetadataBuffer()) == NULL)
+            return OMX_ErrorUndefined;
+
+        if (buf->UnSerialize(bytes, size) == IMB_SUCCESS) {
+            buf->GetType(mSourceType);
+            delete buf;
+        }else{
+            delete buf;
+            return OMX_ErrorUndefined;
+        }
+    }
+
     if (idrPeriod == 0 || IntraPeriod == 0) {
         GOP = 0xFFFFFFFF;
         if (IntraPeriod == 0)
@@ -399,7 +419,7 @@ OMX_ERRORTYPE OMXVideoEncoderAVC::ProcessDataRetrieve(
 
     OMX_NALUFORMATSTYPE NaluFormat = mNalStreamFormat.eNaluFormat;
 
-    if (mStoreMetaDataInBuffers)
+    if (mStoreMetaDataInBuffers && (mSourceType != MetadataBufferTypeUser))
         NaluFormat = OMX_NaluFormatLengthPrefixedSeparateFirstHeader;
 
     VideoEncOutputBuffer outBuf;
