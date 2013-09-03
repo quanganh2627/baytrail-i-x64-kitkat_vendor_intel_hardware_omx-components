@@ -118,7 +118,10 @@ OMX_ERRORTYPE OMXVideoEncoderVP8::ProcessorProcess(OMX_BUFFERHEADERTYPE **buffer
             LOGV("Get buffer done\n");
             outflags |= OMX_BUFFERFLAG_ENDOFFRAME;
             mFrameRetrieved = OMX_TRUE;
-            retains[INPORT_INDEX] = BUFFER_RETAIN_ACCUMULATE;
+            if (mSyncEncoding)
+                retains[INPORT_INDEX] = BUFFER_RETAIN_NOT_RETAIN;
+            else
+                retains[INPORT_INDEX] = BUFFER_RETAIN_ACCUMULATE;
 
         } else {
             retains[INPORT_INDEX] = BUFFER_RETAIN_GETAGAIN;  //get again
@@ -230,4 +233,4 @@ OMX_ERRORTYPE OMXVideoEncoderVP8::SetConfigVideoVp8ReferenceFrame(OMX_PTR pStruc
     return OMX_ErrorNone;
 }
 
-DECLARE_OMX_COMPONENT("OMX.Intel.VideoEncoder.VP8", "video_encoder.vp8", OMXVideoEncoderVP8);
+DECLARE_OMX_COMPONENT("OMX.Intel.VideoEncoder.VP8", "video_encoder.vpx", OMXVideoEncoderVP8);
