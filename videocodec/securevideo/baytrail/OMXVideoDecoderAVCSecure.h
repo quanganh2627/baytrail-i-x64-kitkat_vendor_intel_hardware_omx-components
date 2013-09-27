@@ -17,7 +17,7 @@
 #ifndef OMX_VIDEO_DECODER_AVC_SECURE_H_
 #define OMX_VIDEO_DECODER_AVC_SECURE_H_
 
-
+#include <utils/Mutex.h>
 #include "OMXVideoDecoderBase.h"
 extern "C" {
 #include "secvideoparser.h"
@@ -46,6 +46,7 @@ protected:
 
    virtual OMX_ERRORTYPE PrepareConfigBuffer(VideoConfigBuffer *p);
    virtual OMX_ERRORTYPE PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE *buffer, buffer_retain_t *retain, VideoDecodeBuffer *p);
+   virtual OMX_COLOR_FORMATTYPE GetOutputColorFormat(int width, int height);
 
    virtual OMX_ERRORTYPE BuildHandlerList(void);
    DECLARE_HANDLER(OMXVideoDecoderAVCSecure, ParamVideoAvc);
@@ -125,6 +126,7 @@ private:
     struct meimm mMeiMm;
     uint32_t mVADmaBase;
     pavp_lib_session *mpLibInstance;
+    android::Mutex *mLock;
 };
 
 #endif /* OMX_VIDEO_DECODER_AVC_SECURE_H_ */
