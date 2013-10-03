@@ -72,14 +72,17 @@ struct SECFrameBuffer {
     uint8_t  clear;  // 0 when SEC offset is valid, 1 when data is valid
     uint8_t num_entries;
     wv_packet_metadata  packet_metadata[WV_MAX_PACKETS_IN_FRAME];
-    uint8_t key[16];
     pavp_lib_session *pLibInstance;
+    android::Mutex* pWVPAVPLock;
+    struct meimm MeiMm;
+    uint32_t VADmaBase;
 };
 #pragma pack(pop)
 
 uint8_t          outiv[WV_AES_IV_SIZE];
 OMXVideoDecoderAVCSecure::OMXVideoDecoderAVCSecure()
     : mSessionPaused(false),
+      mVADmaBase(0),
       mpLibInstance(NULL) {
     LOGV("OMXVideoDecoderAVCSecure is constructed.");
     mVideoDecoder = createVideoDecoder(AVC_SECURE_MIME_TYPE);
@@ -137,17 +140,6 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::InitInputPortFormatSpecific(OMX_PARAM_PO
 
 OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorInit(void) {
 
-    int status = meimm_init(&mMeiMm, true);
-
-    if (status)
-       LOGE("meimm_init FAILED ret: %#x", status);
-
-    status =  meimm_alloc_map_memory(&mMeiMm, DMA_BUFFER_SIZE);
-    if (status)
-       LOGE("meimm_alloc_map_memory FAILED ret: %#x", status);
-
-    mVADmaBase = (uint32_t)meimm_get_addr(&mMeiMm);
-    LOGI("mVADMAOffset: %#x", mVADmaBase);
 
     mSessionPaused = false;
     return OMXVideoDecoderBase::ProcessorInit();
@@ -267,17 +259,20 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
     pavp_lib_session::pavp_lib_code rc = pavp_lib_session::status_ok;
     uint32_t parse_size = 0;
 
-    if(!mpLibInstance && secBuffer->pLibInstance)
-    {
+    if(!mpLibInstance && secBuffer->pLibInstance) {
         pavp_lib_session::pavp_lib_code rc = pavp_lib_session::status_ok;
-        LOGE("PAVP Heavy session creation...\n");
+        LOGE("PAVP Heavy session creation...");
         rc = secBuffer->pLibInstance->pavp_create_session(true);
         if (rc != pavp_lib_session::status_ok) {
-            LOGE("PAVP Heavy: pavp_create_session failed with error 0x%x\n", rc);
+            LOGE("PAVP Heavy: pavp_create_session failed with error 0x%x", rc);
+            secBuffer->size = 0;
+            ret = OMX_ErrorNotReady;
         } else {
+            LOGE("PAVP Heavy session created succesfully");
 	    mpLibInstance = secBuffer->pLibInstance;
+            mLock =  secBuffer->pWVPAVPLock;
         }
-    	{
+        if ( ret == OMX_ErrorNone) {
             pavp_lib_session::pavp_lib_code rc = pavp_lib_session::status_ok;
             wv_set_xcript_key_in input;
             wv_set_xcript_key_out output;
@@ -296,13 +291,40 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
             }
  
             if (rc != pavp_lib_session::status_ok)
-                LOGE("sec_pass_through:wv_set_xcript_key() failed with error 0x%x\n", rc);
+                LOGE("sec_pass_through:wv_set_xcript_key() failed with error 0x%x", rc);
 
-            if (output.Header.Status)
-                LOGE("SEC failed: wv_set_xcript_key() returned 0x%x\n", output.Header.Status);
+            if (output.Header.Status) {
+                LOGE("SEC failed: wv_set_xcript_key() FAILED 0x%x", output.Header.Status);
+                secBuffer->size = 0;
+                ret = OMX_ErrorNotReady;
+            }
         }
     }
-    {
+
+    if(secBuffer->pWVPAVPLock)
+        mLock =  secBuffer->pWVPAVPLock;
+    
+    if(mpLibInstance) {
+	bool balive = false;
+        pavp_lib_session::pavp_lib_code rc = pavp_lib_session::status_ok;
+        rc = mpLibInstance->pavp_is_session_alive(&balive);
+        if (rc != pavp_lib_session::status_ok)
+            LOGE("pavp_is_session_alive failed with error 0x%x", rc);
+	if (balive == false || (ret == OMX_ErrorNotReady)) {
+            LOGE("PAVP session is %s", balive?"active":"in-active");
+            secBuffer->size = 0;
+            ret = OMX_ErrorNotReady;
+            //Destroy & re-create
+            LOGI("Destroying the PAVP session...");
+            rc = mpLibInstance->pavp_destroy_session();
+            if (rc != pavp_lib_session::status_ok)
+                LOGE("pavp_destroy_session failed with error 0x%x", rc);
+
+            mpLibInstance = NULL;
+        }
+    }
+    if ( ret == OMX_ErrorNone) {
+        android::Mutex::Autolock autoLock(*mLock);
         wv_heci_process_video_frame_in input;
         wv_heci_process_video_frame_out output;
         sec_wv_packet_metadata metadata;
@@ -344,42 +366,45 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
                       sizeof(input),
                       reinterpret_cast<BYTE*>(&output),
                       sizeof(output));
-        }
 
-        if (rc != pavp_lib_session::status_ok)
-            LOGE(" sec_pass_through failed with error 0x%x\n", rc);
+            if (rc != pavp_lib_session::status_ok) {
+                LOGE("%s PAVP Failed: 0x%x", __FUNCTION__, rc);
+                secBuffer->size = 0;
+                ret = OMX_ErrorNotReady;
+            }
 
-        if (output.Header.Status != 0x0){
-            LOGE(" SEC failed for wv_process_video_frame() returned 0x%x\n", output.Header.Status);
-        } else {
-            memcpy((unsigned char *)(secBuffer->data), (const unsigned int*) (mVADmaBase + (1024*512)), buffer->nFilledLen);
-            parse_size = output.parsed_data_size;
-            memcpy((unsigned char *)(secBuffer->data + buffer->nFilledLen + 4), (const unsigned int*) (mVADmaBase + ((1024*1024)+512)), output.parsed_data_size);
-            memcpy(&outiv, output.iv, WV_AES_IV_SIZE);
+            if (output.Header.Status != 0x0) {
+                LOGE("%s SEC Failed:0x%x", __FUNCTION__, output.Header.Status);
+                secBuffer->size = 0;
+                ret = OMX_ErrorNotReady;
+            } else {
+                memcpy((unsigned char *)(secBuffer->data), (const unsigned int*) (mVADmaBase + (1024*512)), buffer->nFilledLen);
+                parse_size = output.parsed_data_size;
+                memcpy((unsigned char *)(secBuffer->data + buffer->nFilledLen + 4), (const unsigned int*) (mVADmaBase + ((1024*1024)+512)), output.parsed_data_size);
+                memcpy(&outiv, output.iv, WV_AES_IV_SIZE);
+            }
         }
     }
 
-    p->data = secBuffer->data + buffer->nOffset;
-    p->size = buffer->nFilledLen;
+    if(ret == OMX_ErrorNone) {
+        p->data = secBuffer->data + buffer->nOffset;
+        p->size = buffer->nFilledLen;
 
-    // Call "SEC" to parse frame
-    SECParsedFrame* parsedFrame = &(mParsedFrames[secBuffer->index]);
-    memcpy(parsedFrame->nalu_data, (unsigned char *)(secBuffer->data + buffer->nFilledLen + 4), parse_size);
-    parsedFrame->nalu_data_size = parse_size;
-    memcpy(parsedFrame->pavp_info->iv, outiv, WV_AES_IV_SIZE);
+        // Call "SEC" to parse frame
+        SECParsedFrame* parsedFrame = &(mParsedFrames[secBuffer->index]);
+        memcpy(parsedFrame->nalu_data, (unsigned char *)(secBuffer->data + buffer->nFilledLen + 4), parse_size);
+        parsedFrame->nalu_data_size = parse_size;
+        memcpy(parsedFrame->pavp_info->iv, outiv, WV_AES_IV_SIZE);
 
-    // construct frame_info
-    ret = ConstructFrameInfo(p->data, p->size, parsedFrame->pavp_info,
+        // construct frame_info
+        ret = ConstructFrameInfo(p->data, p->size, parsedFrame->pavp_info,
             parsedFrame->nalu_data, parsedFrame->nalu_data_size, &(parsedFrame->frame_info));
 
-    if(ret == OMX_ErrorNone) {
         if (parsedFrame->frame_info.num_nalus == 0 ) {
             LOGE("NALU parsing failed - num_nalus = 0!");
             secBuffer->size = 0;
             ret = OMX_ErrorNotReady;
         } 
-    }
-    if(ret == OMX_ErrorNone) {
 #ifdef PASS_FRAME_INFO
         // Pass frame info to VideoDecoderAVCSecure in VideoDecodeBuffer
         p->data = (uint8_t *)&(parsedFrame->frame_info);
@@ -392,6 +417,11 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
 #endif
     }
     return ret;
+}
+
+OMX_COLOR_FORMATTYPE OMXVideoDecoderAVCSecure::GetOutputColorFormat(int width, int height) {
+    // BYT HWC expects Tiled output color format for all resolution
+    return OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled;
 }
 
 OMX_ERRORTYPE OMXVideoDecoderAVCSecure::BuildHandlerList(void) {
@@ -504,7 +534,24 @@ OMX_U8* OMXVideoDecoderAVCSecure::MemAllocSEC(OMX_U32 nSizeBytes) {
         return NULL;
     }
 
+    if(!mVADmaBase) {
+        int status = meimm_init(&mMeiMm, true);
+
+        if (status)
+            LOGE("meimm_init FAILED ret: %#x", status);
+
+        status =  meimm_alloc_map_memory(&mMeiMm, DMA_BUFFER_SIZE);
+        if (status)
+           LOGE("meimm_alloc_map_memory FAILED ret: %#x", status);
+
+        mVADmaBase = (uint32_t)meimm_get_addr(&mMeiMm);
+
+        LOGI("mVADMAOffset: %#x", mVADmaBase);
+    }
+
     pBuffer->index = index;
+    pBuffer->MeiMm = mMeiMm;
+    pBuffer->VADmaBase = mVADmaBase;
     pBuffer->data = mSECRegion.frameBuffers.buffers[index].base;
     pBuffer->size = mSECRegion.frameBuffers.buffers[index].size;
     mParsedFrames[index].nalu_data = mSECRegion.naluBuffers.buffers[index].base;
@@ -635,4 +682,4 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ConstructFrameInfo(
     return OMX_ErrorNone;
 }
 
-DECLARE_OMX_COMPONENT("OMX.Intel.VideoDecoder.AVC.secure", "video_decoder.avc", OMXVideoDecoderAVCSecure);
+DECLARE_OMX_COMPONENT("OMX.Intel.hw_vd.h264.secure", "video_decoder.avc", OMXVideoDecoderAVCSecure);
