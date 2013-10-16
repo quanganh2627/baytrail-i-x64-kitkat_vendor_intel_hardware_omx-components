@@ -1018,7 +1018,7 @@ int32_t OMXVideoEncoderBase::rgba2nv12conversion(OMX_BUFFERHEADERTYPE *pBuffer)
     uint8_t* metadata = NULL;
     uint32_t len = 0;
 
-    IntelMetadataBuffer imb(MetadataBufferTypeGrallocSource, (int32_t)mBufferHandleMaps[i].mHandle);
+    IntelMetadataBuffer imb(IntelMetadataBufferTypeGrallocSource, (int32_t)mBufferHandleMaps[i].mHandle);
     imb.Serialize(metadata, len);
     memcpy(pBuffer->pBuffer,metadata, len);
     pBuffer->nFilledLen = len;
