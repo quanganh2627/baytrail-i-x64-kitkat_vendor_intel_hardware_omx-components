@@ -174,6 +174,15 @@ OMX_ERRORTYPE OMXVideoEncoderBase::InitOutputPort(void) {
     mConfigIntelAir.nAirMBs = 0;
     mConfigIntelAir.nAirThreshold = 0;
 
+    // OMX_VIDEO_CONFIG_INTEL_AIR
+    memset(&mParamVideoRefresh, 0, sizeof(mParamVideoRefresh));
+    SetTypeHeader(&mParamVideoRefresh, sizeof(mParamVideoRefresh));
+    mParamVideoRefresh.nPortIndex = OUTPORT_INDEX;
+    mParamVideoRefresh.eRefreshMode = OMX_VIDEO_IntraRefreshAdaptive;
+    mParamVideoRefresh.nAirMBs = 0;
+    mParamVideoRefresh.nAirRef = 0;
+    mParamVideoRefresh.nCirMBs = 0;
+    
     // OMX_CONFIG_FRAMERATETYPE
     memset(&mConfigFramerate, 0, sizeof(mConfigFramerate));
     SetTypeHeader(&mConfigFramerate, sizeof(mConfigFramerate));
@@ -444,12 +453,14 @@ OMX_ERRORTYPE OMXVideoEncoderBase::BuildHandlerList(void) {
     AddHandler((OMX_INDEXTYPE)OMX_IndexParamIntelBitrate, GetParamIntelBitrate, SetParamIntelBitrate);
     AddHandler((OMX_INDEXTYPE)OMX_IndexConfigIntelBitrate, GetConfigIntelBitrate, SetConfigIntelBitrate);
     AddHandler((OMX_INDEXTYPE)OMX_IndexConfigIntelAIR, GetConfigIntelAIR, SetConfigIntelAIR);
+    AddHandler((OMX_INDEXTYPE)OMX_IndexParamVideoIntraRefresh, GetParamVideoIntraRefresh, SetParamVideoIntraRefresh);
     AddHandler(OMX_IndexConfigVideoFramerate, GetConfigVideoFramerate, SetConfigVideoFramerate);
     AddHandler(OMX_IndexConfigVideoIntraVOPRefresh, GetConfigVideoIntraVOPRefresh, SetConfigVideoIntraVOPRefresh);
     //AddHandler(OMX_IndexParamIntelAdaptiveSliceControl, GetParamIntelAdaptiveSliceControl, SetParamIntelAdaptiveSliceControl);
     //AddHandler(OMX_IndexParamVideoProfileLevelQuerySupported, GetParamVideoProfileLevelQuerySupported, SetParamVideoProfileLevelQuerySupported);
     AddHandler((OMX_INDEXTYPE)OMX_IndexStoreMetaDataInBuffers, GetStoreMetaDataInBuffers, SetStoreMetaDataInBuffers);
     AddHandler((OMX_INDEXTYPE)OMX_IndexExtSyncEncoding, GetSyncEncoding, SetSyncEncoding);
+    AddHandler((OMX_INDEXTYPE)OMX_IndexExtPrependSPSPPS, GetPrependSPSPPS, SetPrependSPSPPS);
 
     return OMX_ErrorNone;
 }
@@ -688,6 +699,60 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigIntelAIR(OMX_PTR pStructure) {
     return OMX_ErrorNone;
 }
 
+OMX_ERRORTYPE OMXVideoEncoderBase::GetParamVideoIntraRefresh(OMX_PTR pStructure) {
+    OMX_ERRORTYPE ret;
+    OMX_VIDEO_PARAM_INTRAREFRESHTYPE *p = (OMX_VIDEO_PARAM_INTRAREFRESHTYPE *)pStructure;
+
+    CHECK_TYPE_HEADER(p);
+    CHECK_PORT_INDEX(p, OUTPORT_INDEX);
+    memcpy(p, &mParamVideoRefresh, sizeof(*p));
+    return OMX_ErrorNone;
+}
+
+OMX_ERRORTYPE OMXVideoEncoderBase::SetParamVideoIntraRefresh(OMX_PTR pStructure) {
+    OMX_ERRORTYPE ret;
+    Encode_Status retStatus = ENCODE_SUCCESS;
+    if (mParamIntelBitrate.eControlRate == OMX_Video_Intel_ControlRateMax) {
+        LOGE("SetConfigIntelAIR failed. Feature is disabled.");
+        return OMX_ErrorUnsupportedIndex;
+    }
+    OMX_VIDEO_PARAM_INTRAREFRESHTYPE *p = (OMX_VIDEO_PARAM_INTRAREFRESHTYPE *)pStructure;
+    CHECK_TYPE_HEADER(p);
+    CHECK_PORT_INDEX(p, OUTPORT_INDEX);
+
+    // set in either Loaded  state (ComponentSetParam) or Executing state (ComponentSetConfig)
+    mParamVideoRefresh = *p;
+
+    // return OMX_ErrorNone if not in Executing state
+    // TODO: return OMX_ErrorIncorrectStateOperation?
+    CHECK_SET_CONFIG_STATE();
+
+    if (mParamIntelBitrate.eControlRate != OMX_Video_Intel_ControlRateVideoConferencingMode) {
+        LOGE("SetConfigIntelAIR failed. Feature is supported only in VCM.");
+        return OMX_ErrorUnsupportedSetting;
+    }
+
+    VideoConfigIntraRefreshType configIntraRefreshType;
+    configIntraRefreshType.refreshType = (VideoIntraRefreshType)(mParamVideoRefresh.eRefreshMode + 1);
+    if(configIntraRefreshType.refreshType == VIDEO_ENC_CIR)
+        return OMX_ErrorUnsupportedSetting;
+    VideoConfigAIR configAIR;
+    
+    configAIR.airParams.airMBs = mParamVideoRefresh.nAirMBs;
+    configAIR.airParams.airThreshold = mParamVideoRefresh.nAirRef; 
+
+    retStatus = mVideoEncoder->setConfig(&configAIR);
+    if(retStatus != ENCODE_SUCCESS) {
+        LOGW("Failed to set AIR config");
+    }
+
+    retStatus = mVideoEncoder->setConfig(&configIntraRefreshType);
+    if(retStatus != ENCODE_SUCCESS) {
+        LOGW("Failed to set refresh config");
+    }
+    return OMX_ErrorNone;
+}
+
 OMX_ERRORTYPE OMXVideoEncoderBase::GetConfigVideoFramerate(OMX_PTR pStructure) {
     OMX_ERRORTYPE ret;
     OMX_CONFIG_FRAMERATETYPE *p = (OMX_CONFIG_FRAMERATETYPE *)pStructure;
@@ -894,6 +959,14 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetSyncEncoding(OMX_PTR pStructure) {
     return OMX_ErrorNone;
 };
 
+OMX_ERRORTYPE OMXVideoEncoderBase::GetPrependSPSPPS(OMX_PTR pStructure) {
+    return OMX_ErrorNone;
+};
+
+OMX_ERRORTYPE OMXVideoEncoderBase::SetPrependSPSPPS(OMX_PTR pStructure) {
+    LOGD("SetPrependSPSPPS success");
+    return OMX_ErrorNone;
+};
 #ifdef IMG_GFX
 // Utility function that blits the original source buffer in RGBA format to a temporary
 // buffer in NV12 format, and use the temporary buffer as the source buffer
