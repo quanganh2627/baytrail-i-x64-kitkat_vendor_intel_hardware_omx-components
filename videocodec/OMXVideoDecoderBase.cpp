@@ -29,7 +29,11 @@ OMXVideoDecoderBase::OMXVideoDecoderBase()
       mNativeBufferCount(OUTPORT_NATIVE_BUFFER_COUNT),
       mOMXBufferHeaderTypePtrNum(0),
       mRotationDegrees(0),
-      mWorkingMode(RAWDATA_MODE) {
+#ifdef TARGET_HAS_VPP
+      mVppBufferNum(0),
+#endif
+      mWorkingMode(RAWDATA_MODE),
+      mErrorReportEnabled (false) {
       memset(&mGraphicBufferParam, 0, sizeof(mGraphicBufferParam));
 }
 
@@ -216,6 +220,9 @@ OMX_ERRORTYPE OMXVideoDecoderBase::ProcessorDeinit(void) {
     mOMXBufferHeaderTypePtrNum = 0;
     memset(&mGraphicBufferParam, 0, sizeof(mGraphicBufferParam));
     mRotationDegrees = 0;
+#ifdef TARGET_HAS_VPP
+    mVppBufferNum = 0;
+#endif
     return OMXComponentCodecBase::ProcessorDeinit();
 }
 
@@ -449,7 +456,14 @@ OMX_ERRORTYPE OMXVideoDecoderBase::PrepareConfigBuffer(VideoConfigBuffer *p) {
         }
 
     }
+
+    if (mErrorReportEnabled)
+        p->flag |= WANT_ERROR_REPORT;
+
     p->rotationDegrees = mRotationDegrees;
+#ifdef TARGET_HAS_VPP
+    p->vppBufferNum = mVppBufferNum;
+#endif
     p->width = paramPortDefinitionInput->format.video.nFrameWidth;
     p->height = paramPortDefinitionInput->format.video.nFrameHeight;
     return OMX_ErrorNone;
@@ -490,6 +504,15 @@ OMX_ERRORTYPE OMXVideoDecoderBase::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE *buf
         p->flag |= IS_SYNC_FRAME;
     }
 
+    if (buffer->pInputPortPrivate) {
+        uint32_t degree = 0;
+        memcpy ((void *) &degree, buffer->pInputPortPrivate, sizeof(uint32_t));
+        p->rotationDegrees = degree;
+        LOGV("rotationDegrees = %d", p->rotationDegrees);
+    } else {
+        p->rotationDegrees = 0;
+    }
+
     *retain= BUFFER_RETAIN_NOT_RETAIN;
     return OMX_ErrorNone;
 }
@@ -498,6 +521,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::FillRenderBuffer(OMX_BUFFERHEADERTYPE **pBuff
 
     OMX_BUFFERHEADERTYPE *buffer = *pBuffer;
     OMX_BUFFERHEADERTYPE *buffer_orign = buffer;
+    VideoErrorBuffer *ErrBufPtr = NULL;
 
     if (mWorkingMode != GRAPHICBUFFER_MODE && buffer->pPlatformPrivate) {
         VideoRenderBuffer *p = (VideoRenderBuffer *)buffer->pPlatformPrivate;
@@ -505,9 +529,16 @@ OMX_ERRORTYPE OMXVideoDecoderBase::FillRenderBuffer(OMX_BUFFERHEADERTYPE **pBuff
         buffer->pPlatformPrivate = NULL;
     }
 
+    if (mWorkingMode == GRAPHICBUFFER_MODE && mErrorReportEnabled) {
+        if (buffer->pAppPrivate == NULL)
+            LOGE("The App doesn't provide the output buffer for error reporting");
+        else
+            ErrBufPtr = (VideoErrorBuffer *)buffer->pAppPrivate;
+    }
+
     bool draining = (inportBufferFlags & OMX_BUFFERFLAG_EOS);
     //pthread_mutex_lock(&mSerializationLock);
-    const VideoRenderBuffer *renderBuffer = mVideoDecoder->getOutput(draining);
+    const VideoRenderBuffer *renderBuffer = mVideoDecoder->getOutput(draining, ErrBufPtr);
     //pthread_mutex_unlock(&mSerializationLock);
     if (renderBuffer == NULL) {
         buffer->nFilledLen = 0;
@@ -580,7 +611,12 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
     int sliceHeightCropped = heightCropped;
     int force_realloc = 0;
 
+#ifdef TARGET_HAS_VPP
+    LOGI("============== mVppBufferNum = %d\n", mVppBufferNum);
+    if (paramPortDefinitionOutput.nBufferCountActual - mVppBufferNum < formatInfo->actualBufferNeeded) {
+#else
     if (paramPortDefinitionOutput.nBufferCountActual < formatInfo->actualBufferNeeded) {
+#endif
         if (mWorkingMode == GRAPHICBUFFER_MODE) {
             LOGV("output port buffer number is not enough: %d to %d",
                  paramPortDefinitionOutput.nBufferCountActual,
@@ -700,7 +736,11 @@ OMX_ERRORTYPE OMXVideoDecoderBase::BuildHandlerList(void) {
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtUseNativeBuffer), GetNativeBuffer, SetNativeBuffer);
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtEnableNativeBuffer), GetNativeBufferMode, SetNativeBufferMode);
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtRotationDegrees), GetDecoderRotation, SetDecoderRotation);
+#ifdef TARGET_HAS_VPP
+    AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtVppBufferNum), GetDecoderVppBufferNum, SetDecoderVppBufferNum);
+#endif
     AddHandler(OMX_IndexConfigCommonOutputCrop, GetDecoderOutputCrop, SetDecoderOutputCrop);
+    AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtEnableErrorReport), GetErrorReportMode, SetErrorReportMode);
 
     return OMX_ErrorNone;
 }
@@ -823,14 +863,37 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetDecoderRotation(OMX_PTR pStructure) {
     CHECK_SET_PARAM_STATE();
     int32_t rotationDegrees = 0;
 
-    rotationDegrees = *(static_cast<int32_t*>(pStructure));
-    mRotationDegrees = rotationDegrees;
+    if (pStructure) {
+        rotationDegrees = *(static_cast<int32_t*>(pStructure));
+        mRotationDegrees = rotationDegrees;
+
+        return OMX_ErrorNone;
+    } else
+        return OMX_ErrorBadParameter;
+}
+
+#ifdef TARGET_HAS_VPP
+OMX_ERRORTYPE OMXVideoDecoderBase::GetDecoderVppBufferNum(OMX_PTR pStructure) {
+    return OMX_ErrorBadParameter;
+}
+OMX_ERRORTYPE OMXVideoDecoderBase::SetDecoderVppBufferNum(OMX_PTR pStructure) {
+    CHECK_SET_PARAM_STATE();
+    int32_t num = 0;
+
+    num = *(static_cast<int32_t*>(pStructure));
+    mVppBufferNum = num;
 
     return OMX_ErrorNone;
 }
+#endif
 
 OMX_ERRORTYPE OMXVideoDecoderBase::GetDecoderOutputCrop(OMX_PTR pStructure) {
+
+    OMX_ERRORTYPE ret;
     OMX_CONFIG_RECTTYPE *rectParams = (OMX_CONFIG_RECTTYPE *)pStructure;
+
+    CHECK_TYPE_HEADER(rectParams);
+
     if (rectParams->nPortIndex != OUTPORT_INDEX) {
         return OMX_ErrorUndefined;
     }
@@ -848,6 +911,23 @@ OMX_ERRORTYPE OMXVideoDecoderBase::GetDecoderOutputCrop(OMX_PTR pStructure) {
 
 OMX_ERRORTYPE OMXVideoDecoderBase::SetDecoderOutputCrop(OMX_PTR pStructure) {
     return OMX_ErrorUnsupportedSetting;
+}
+
+OMX_ERRORTYPE OMXVideoDecoderBase::GetErrorReportMode(OMX_PTR pStructure) {
+    LOGE("GetErrorReportMode is not implemented");
+    return OMX_ErrorNotImplemented;
+}
+
+OMX_ERRORTYPE OMXVideoDecoderBase::SetErrorReportMode(OMX_PTR pStructure) {
+    CHECK_SET_PARAM_STATE();
+
+    if (pStructure) {
+        mErrorReportEnabled = *(static_cast<bool *>(pStructure));
+        LOGD("Error reporting is %s", mErrorReportEnabled ? "enabled" : "disabled");
+
+        return OMX_ErrorNone;
+    } else
+        return OMX_ErrorBadParameter;
 }
 
 OMX_COLOR_FORMATTYPE OMXVideoDecoderBase::GetOutputColorFormat(int width, int height) {

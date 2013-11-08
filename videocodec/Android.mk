@@ -7,6 +7,10 @@ endif
 
 include $(CLEAR_VARS)
 
+ifeq ($(TARGET_HAS_VPP),true)
+LOCAL_CFLAGS += -DTARGET_HAS_VPP
+endif
+
 LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
@@ -37,6 +41,10 @@ ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
+LOCAL_CFLAGS += -DVED_TILING
+endif
+
 ifeq ($(TARGET_VPP_USE_GEN),true)
 LOCAL_CFLAGS += -DDEINTERLACE_EXT
 endif
@@ -51,6 +59,11 @@ PLATFORM_SUPPORT_VP8 := \
 
 ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(PLATFORM_SUPPORT_VP8)),)
 include $(CLEAR_VARS)
+
+ifeq ($(TARGET_HAS_VPP),true)
+LOCAL_CFLAGS += -DTARGET_HAS_VPP
+endif
+
 LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
@@ -81,7 +94,9 @@ include $(BUILD_SHARED_LIBRARY)
 endif
 
 include $(CLEAR_VARS)
-
+ifeq ($(TARGET_HAS_VPP),true)
+LOCAL_CFLAGS += -DTARGET_HAS_VPP
+endif
 LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
@@ -112,10 +127,16 @@ ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
+LOCAL_CFLAGS += -DVED_TILING
+endif
+
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
-
+ifeq ($(TARGET_HAS_VPP),true)
+LOCAL_CFLAGS += -DTARGET_HAS_VPP
+endif
 LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
@@ -146,10 +167,15 @@ ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
+LOCAL_CFLAGS += -DVED_TILING
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
-
+ifeq ($(TARGET_HAS_VPP),true)
+LOCAL_CFLAGS += -DTARGET_HAS_VPP
+endif
 LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
@@ -180,6 +206,10 @@ ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
+LOCAL_CFLAGS += -DVED_TILING
+endif
+
 ifeq ($(TARGET_VPP_USE_GEN),true)
 LOCAL_CFLAGS += -DDEINTERLACE_EXT
 endif
@@ -187,7 +217,9 @@ endif
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
-
+ifeq ($(TARGET_HAS_VPP),true)
+LOCAL_CFLAGS += -DTARGET_HAS_VPP
+endif
 LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
@@ -226,6 +258,10 @@ LOCAL_SRC_FILES += securevideo/ctp/OMXVideoDecoderAVCSecure.cpp
 LOCAL_CFLAGS += -DVED_TILING
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
+LOCAL_CFLAGS += -DVED_TILING
+endif
+
 ifeq ($(BUILD_WITH_SECURITY_FRAMEWORK),chaabi_token)
 LOCAL_SHARED_LIBRARIES += \
     libsepdrm_cc54 \
@@ -252,9 +288,9 @@ LOCAL_SHARED_LIBRARIES += libstlport \
                           libsecvideoparser
 
 LOCAL_C_INCLUDES += bionic \
-                    external/stlport/stlport \
-                    external/openssl/include \
-                    external/libxml2/include \
+                    $(call include-path-for, stlport) \
+                    $(call include-path-for, openssl) \
+                    $(call include-path-for, libxml2) \
                     $(TARGET_OUT_HEADERS)/secvideoparser \
                     $(LOCAL_PATH)/securevideo/baytrail/ \
                     $(TOP)/vendor/intel/hardware/txei/meimm/ \
@@ -273,7 +309,9 @@ LOCAL_MODULE := libOMXVideoDecoderAVCSecure
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
-
+ifeq ($(TARGET_HAS_VPP),true)
+LOCAL_CFLAGS += -DTARGET_HAS_VPP
+endif
 LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
@@ -319,7 +357,9 @@ include $(BUILD_SHARED_LIBRARY)
 
 
 include $(CLEAR_VARS)
-
+ifeq ($(TARGET_HAS_VPP),true)
+LOCAL_CFLAGS += -DTARGET_HAS_VPP
+endif
 LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
@@ -368,7 +408,9 @@ LOCAL_MODULE := libOMXVideoEncoderH263
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
-
+ifeq ($(TARGET_HAS_VPP),true)
+LOCAL_CFLAGS += -DTARGET_HAS_VPP
+endif
 LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
@@ -413,7 +455,9 @@ LOCAL_MODULE := libOMXVideoEncoderMPEG4
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
-
+ifeq ($(TARGET_HAS_VPP),true)
+LOCAL_CFLAGS += -DTARGET_HAS_VPP
+endif
 LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
@@ -444,10 +488,16 @@ ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
+LOCAL_CFLAGS += -DVED_TILING
+endif
+
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
-
+ifeq ($(TARGET_HAS_VPP),true)
+LOCAL_CFLAGS += -DTARGET_HAS_VPP
+endif
 LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 

@@ -67,6 +67,10 @@ protected:
     DECLARE_HANDLER(OMXVideoDecoderBase, NativeBufferMode);
     DECLARE_HANDLER(OMXVideoDecoderBase, DecoderRotation);
     DECLARE_HANDLER(OMXVideoDecoderBase, DecoderOutputCrop);
+#ifdef TARGET_HAS_VPP
+    DECLARE_HANDLER(OMXVideoDecoderBase, DecoderVppBufferNum);
+#endif
+    DECLARE_HANDLER(OMXVideoDecoderBase, ErrorReportMode);
 
 private:
     enum {
@@ -93,6 +97,9 @@ private:
     };
     GraphicBufferParam mGraphicBufferParam;
     uint32_t mRotationDegrees;
+#ifdef TARGET_HAS_VPP
+    uint32_t mVppBufferNum;
+#endif
 
 protected:
     IVideoDecoder *mVideoDecoder;
@@ -102,6 +109,7 @@ protected:
         RAWDATA_MODE,
     };
     WorkingMode mWorkingMode;
+    bool mErrorReportEnabled;
 };
 
 #endif /* OMX_VIDEO_DECODER_BASE_H_ */
