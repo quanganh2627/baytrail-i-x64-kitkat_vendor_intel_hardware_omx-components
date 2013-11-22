@@ -113,7 +113,7 @@ OMXVideoEncoderAVC::OMXVideoEncoderAVC() {
         }
     }
 
-    mSourceType = MetadataBufferTypeCameraSource;
+    mSourceType = IntelMetadataBufferTypeCameraSource;
 }
 
 OMXVideoEncoderAVC::~OMXVideoEncoderAVC() {
@@ -426,7 +426,7 @@ OMX_ERRORTYPE OMXVideoEncoderAVC::ProcessDataRetrieve(
     // NaluFormat not set, setting default
     if (NaluFormat == 0) {
         if (mStoreMetaDataInBuffers) {
-            if(mSourceType == MetadataBufferTypeCameraSource)
+            if(mSourceType == IntelMetadataBufferTypeCameraSource)
                 NaluFormat = (OMX_NALUFORMATSTYPE)OMX_NaluFormatLengthPrefixedSeparateFirstHeader;
             else
                 NaluFormat = (OMX_NALUFORMATSTYPE)OMX_NaluFormatStartCodesSeparateFirstHeader;
@@ -598,15 +598,6 @@ OMX_ERRORTYPE OMXVideoEncoderAVC::ProcessorProcess(
     */
     if(!eInfo.EncodeComplete) {
 
-        //for live effect
-#ifdef IMG_GFX
-        if (bAndroidOpaqueFormat) {
-             mCurHandle = rgba2nv12conversion(buffers[INPORT_INDEX]);
-             if (mCurHandle < 0)
-                return OMX_ErrorUndefined;
-        }
-#endif
-
         // encode and setConfig need to be thread safe
         if (eInfo.EndOfEncode)
             inBuf.flag |= ENCODE_BUFFERFLAG_ENDOFSTREAM;
@@ -653,15 +644,6 @@ OMX_ERRORTYPE OMXVideoEncoderAVC::ProcessorProcess(
 #endif
 
 exit:
-
-#ifdef IMG_GFX
-    if (bAndroidOpaqueFormat && buffers[INPORT_INDEX]->nFilledLen != 0) {
-        // Restore input buffer's content
-        buffers[INPORT_INDEX]->nFilledLen = 4 + sizeof(buffer_handle_t);
-        memcpy(buffers[INPORT_INDEX]->pBuffer, mBufferHandleMaps[mCurHandle].backBuffer,
-                buffers[INPORT_INDEX]->nFilledLen);
-    }
-#endif
 
     /* restore all states into input OMX buffer
     */

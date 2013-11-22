@@ -49,6 +49,10 @@ ifeq ($(TARGET_VPP_USE_GEN),true)
 LOCAL_CFLAGS += -DDEINTERLACE_EXT
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
+LOCAL_CFLAGS += -DUSE_GEN_HW
+endif
+
 include $(BUILD_SHARED_LIBRARY)
 
 
@@ -219,7 +223,14 @@ ifeq ($(TARGET_VPP_USE_GEN),true)
 LOCAL_CFLAGS += -DDEINTERLACE_EXT
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
+LOCAL_CFLAGS += -DUSE_GEN_HW
+endif
+
 include $(BUILD_SHARED_LIBRARY)
+
+#Build secure AVC video decoder only on supported platforms
+ifeq ($(USE_INTEL_SECURE_AVC),true)
 
 include $(CLEAR_VARS)
 ifeq ($(TARGET_HAS_VPP),true)
@@ -247,13 +258,13 @@ LOCAL_C_INCLUDES := \
     $(TARGET_OUT_HEADERS)/libttm \
     $(call include-path-for, frameworks-native)/media/hardware \
     $(call include-path-for, frameworks-native)/media/openmax \
-    $(TOP)/linux/modules/intel_media/common
 
 LOCAL_SRC_FILES := \
     OMXComponentCodecBase.cpp\
     OMXVideoDecoderBase.cpp
 
 ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
+# Secure AVC decoder for Clovertrail (uses IMR)
 LOCAL_SHARED_LIBRARIES += libsepdrm
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/libsepdrm
@@ -261,13 +272,9 @@ LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/libsepdrm
 LOCAL_SRC_FILES += securevideo/ctp/OMXVideoDecoderAVCSecure.cpp
 
 LOCAL_CFLAGS += -DVED_TILING
-endif
 
-ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
-LOCAL_CFLAGS += -DVED_TILING
-endif
-
-ifeq ($(BUILD_WITH_SECURITY_FRAMEWORK),chaabi_token)
+else ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
+#Secure AVC decoder for Merrifield (uses IED)
 LOCAL_SHARED_LIBRARIES += \
     libsepdrm_cc54 \
     libdx_cc7
@@ -278,40 +285,24 @@ LOCAL_C_INCLUDES += \
 
 LOCAL_SRC_FILES += securevideo/merrifield/OMXVideoDecoderAVCSecure.cpp
 
-else ifeq ($(BUILD_WITH_SECURITY_FRAMEWORK),txei)
-LOCAL_SHARED_LIBRARIES += libstlport \
-                          libutils \
-                          libz \
-                          libdl \
-                          libcrypto \
-                          libssl \
-                          libicuuc \
-                          libcutils \
-                          libc \
-                          libmeimm \
-                          libpavp \
-                          libsecvideoparser
-
-LOCAL_C_INCLUDES += bionic \
-                    $(call include-path-for, stlport) \
-                    $(call include-path-for, openssl) \
-                    $(call include-path-for, libxml2) \
-                    $(TARGET_OUT_HEADERS)/secvideoparser \
-                    $(LOCAL_PATH)/securevideo/baytrail/ \
-                    $(TOP)/vendor/intel/hardware/txei/meimm/ \
-                    $(TOP)/vendor/intel/hardware/PRIVATE/ufo/include
-
-LOCAL_SRC_FILES += securevideo/baytrail/OMXVideoDecoderAVCSecure.cpp 
-
 LOCAL_CFLAGS += -DVED_TILING
-endif
 
+else ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
+#Secure AVC decoder for Baytrail (uses PAVP)
+LOCAL_C_INCLUDES += $(TOP)/vendor/intel/hardware/PRIVATE/ufo/inc/libpavp
+
+LOCAL_SHARED_LIBRARIES += libpavp 
+
+LOCAL_SRC_FILES += securevideo/baytrail/OMXVideoDecoderAVCSecure.cpp
+
+endif
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderAVCSecure
 
-
 include $(BUILD_SHARED_LIBRARY)
+
+endif #USE_INTEL_SECURE_AVC
 
 include $(CLEAR_VARS)
 ifeq ($(TARGET_HAS_VPP),true)
@@ -335,12 +326,9 @@ LOCAL_C_INCLUDES := \
     $(TARGET_OUT_HEADERS)/wrs_omxil_core \
     $(TARGET_OUT_HEADERS)/khronos/openmax \
     $(TARGET_OUT_HEADERS)/libmix_videoencoder \
-    $(TARGET_OUT_HEADERS)/libva	\
-    $(TARGET_OUT_HEADERS)/libsharedbuffer \
-    $(call include-path-for, libhardware) \
+    $(TARGET_OUT_HEADERS)/libva \
     $(call include-path-for, frameworks-native)/media/hardware \
     $(call include-path-for, frameworks-native)/media/openmax \
-    $(TARGET_OUT_HEADERS)/pvr
 
 LOCAL_SRC_FILES := \
     OMXComponentCodecBase.cpp \
@@ -348,13 +336,6 @@ LOCAL_SRC_FILES := \
     OMXVideoEncoderAVC.cpp
 
 LOCAL_CFLAGS += $(LOCAL_C_FLAGS)
-ifeq ($(ENABLE_MRFL_GRAPHICS),true)
-LOCAL_CFLAGS += -DMRFLD_OMX
-endif
-
-ifeq ($(ENABLE_IMG_GRAPHICS),true)
-    LOCAL_CFLAGS += -DIMG_GFX
-endif
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoEncoderAVC
@@ -383,12 +364,9 @@ LOCAL_C_INCLUDES := \
     $(TARGET_OUT_HEADERS)/wrs_omxil_core \
     $(TARGET_OUT_HEADERS)/khronos/openmax \
     $(TARGET_OUT_HEADERS)/libmix_videoencoder \
-    $(TARGET_OUT_HEADERS)/libva	\
-    $(TARGET_OUT_HEADERS)/libsharedbuffer \
-    $(call include-path-for, libhardware) \
+    $(TARGET_OUT_HEADERS)/libva \
     $(call include-path-for, frameworks-native)/media/hardware \
     $(call include-path-for, frameworks-native)/media/openmax \
-    $(TARGET_OUT_HEADERS)/pvr
 
 LOCAL_SRC_FILES := \
     OMXComponentCodecBase.cpp \
@@ -396,16 +374,9 @@ LOCAL_SRC_FILES := \
     OMXVideoEncoderH263.cpp
 
 LOCAL_CFLAGS += $(LOCAL_C_FLAGS)
-ifeq ($(ENABLE_MRFL_GRAPHICS),true)
-LOCAL_CFLAGS += -DMRFLD_OMX
-endif
 
 ifeq ($(SW_MPEG4_ENCODER),true)
     LOCAL_CFLAGS += -DSYNC_MODE
-endif
-
-ifeq ($(ENABLE_IMG_GRAPHICS),true)
-    LOCAL_CFLAGS += -DIMG_GFX
 endif
 
 LOCAL_MODULE_TAGS := optional
@@ -434,12 +405,9 @@ LOCAL_C_INCLUDES := \
     $(TARGET_OUT_HEADERS)/wrs_omxil_core \
     $(TARGET_OUT_HEADERS)/khronos/openmax \
     $(TARGET_OUT_HEADERS)/libmix_videoencoder \
-    $(TARGET_OUT_HEADERS)/libva	\
-    $(TARGET_OUT_HEADERS)/libsharedbuffer \
-    $(call include-path-for, libhardware) \
+    $(TARGET_OUT_HEADERS)/libva \
     $(call include-path-for, frameworks-native)/media/hardware \
     $(call include-path-for, frameworks-native)/media/openmax \
-    $(TARGET_OUT_HEADERS)/pvr
 
 LOCAL_SRC_FILES := \
     OMXComponentCodecBase.cpp \
@@ -447,13 +415,6 @@ LOCAL_SRC_FILES := \
     OMXVideoEncoderMPEG4.cpp
 
 LOCAL_CFLAGS += $(LOCAL_C_FLAGS)
-ifeq ($(ENABLE_MRFL_GRAPHICS),true)
-LOCAL_CFLAGS += -DMRFLD_OMX
-endif
-
-ifeq ($(ENABLE_IMG_GRAPHICS),true)
-    LOCAL_CFLAGS += -DIMG_GFX
-endif
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoEncoderMPEG4
@@ -521,12 +482,9 @@ LOCAL_C_INCLUDES := \
     $(TARGET_OUT_HEADERS)/wrs_omxil_core \
     $(TARGET_OUT_HEADERS)/khronos/openmax \
     $(TARGET_OUT_HEADERS)/libmix_videoencoder \
-    $(TARGET_OUT_HEADERS)/libva	\
-    $(TARGET_OUT_HEADERS)/libsharedbuffer \
-    $(call include-path-for, libhardware) \
+    $(TARGET_OUT_HEADERS)/libva \
     $(call include-path-for, frameworks-native)/media/hardware \
     $(call include-path-for, frameworks-native)/media/openmax \
-    $(TARGET_OUT_HEADERS)/pvr
 
 LOCAL_SRC_FILES := \
     OMXComponentCodecBase.cpp \
@@ -534,21 +492,9 @@ LOCAL_SRC_FILES := \
     OMXVideoEncoderVP8.cpp
 
 LOCAL_CFLAGS += $(LOCAL_C_FLAGS)
-ifeq ($(ENABLE_MRFL_GRAPHICS),true)
-LOCAL_CFLAGS += -DMRFLD_OMX
-endif
-
-ifeq ($(ENABLE_IMG_GRAPHICS),true)
-    LOCAL_CFLAGS += -DIMG_GFX
-endif
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoEncoderVP8
 include $(BUILD_SHARED_LIBRARY)
-
-# prnz - prebuilt SEC video parser
-SAVE_LOCAL_PATH := $(LOCAL_PATH)
-include $(LOCAL_PATH)/securevideo/baytrail/secvideoparser/Android.mk
-LOCAL_PATH = $(SAVE_LOCAL_PATH)
 
 endif

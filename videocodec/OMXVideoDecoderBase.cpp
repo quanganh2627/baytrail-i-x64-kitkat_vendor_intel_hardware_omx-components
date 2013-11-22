@@ -444,6 +444,8 @@ OMX_ERRORTYPE OMXVideoDecoderBase::PrepareConfigBuffer(VideoConfigBuffer *p) {
         p->graphicBufferColorFormat = mGraphicBufferParam.graphicBufferColorFormat;
         p->graphicBufferWidth = mGraphicBufferParam.graphicBufferWidth;
         p->graphicBufferHeight = mGraphicBufferParam.graphicBufferHeight;
+        if (p->graphicBufferColorFormat == OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled)
+            p->flag |= USE_TILING_MEMORY;
 
         PortVideo *port = NULL;
         port = static_cast<PortVideo *>(this->ports[INPORT_INDEX]);
@@ -456,9 +458,6 @@ OMX_ERRORTYPE OMXVideoDecoderBase::PrepareConfigBuffer(VideoConfigBuffer *p) {
         }
 
     }
-
-    if (mErrorReportEnabled)
-        p->flag |= WANT_ERROR_REPORT;
 
     p->rotationDegrees = mRotationDegrees;
 #ifdef TARGET_HAS_VPP
@@ -530,10 +529,10 @@ OMX_ERRORTYPE OMXVideoDecoderBase::FillRenderBuffer(OMX_BUFFERHEADERTYPE **pBuff
     }
 
     if (mWorkingMode == GRAPHICBUFFER_MODE && mErrorReportEnabled) {
-        if (buffer->pAppPrivate == NULL)
+        if (buffer->pOutputPortPrivate == NULL)
             LOGE("The App doesn't provide the output buffer for error reporting");
         else
-            ErrBufPtr = (VideoErrorBuffer *)buffer->pAppPrivate;
+            ErrBufPtr = (VideoErrorBuffer *)buffer->pOutputPortPrivate;
     }
 
     bool draining = (inportBufferFlags & OMX_BUFFERFLAG_EOS);
@@ -921,16 +920,17 @@ OMX_ERRORTYPE OMXVideoDecoderBase::GetErrorReportMode(OMX_PTR pStructure) {
 }
 
 OMX_ERRORTYPE OMXVideoDecoderBase::SetErrorReportMode(OMX_PTR pStructure) {
-    CHECK_SET_PARAM_STATE();
+    OMX_ERRORTYPE ret;
 
-    if (pStructure) {
-        mErrorReportEnabled = *(static_cast<bool *>(pStructure));
-        LOGD("Error reporting is %s", mErrorReportEnabled ? "enabled" : "disabled");
+    OMX_VIDEO_CONFIG_INTEL_ERROR_REPORT *p = (OMX_VIDEO_CONFIG_INTEL_ERROR_REPORT *)pStructure;
+    CHECK_TYPE_HEADER(p);
+    CHECK_PORT_INDEX(p, OUTPORT_INDEX);
 
-        return OMX_ErrorNone;
-    } else {
-        return OMX_ErrorBadParameter;
-    }
+    mErrorReportEnabled = p->bEnable;
+    LOGD("Error reporting is %s", mErrorReportEnabled ? "enabled" : "disabled");
+
+    mVideoDecoder->enableErrorReport(mErrorReportEnabled);
+    return OMX_ErrorNone;
 }
 
 OMX_COLOR_FORMATTYPE OMXVideoDecoderBase::GetOutputColorFormat(int width, int height) {
