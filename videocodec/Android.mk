@@ -186,7 +186,8 @@ endif
 
 include $(BUILD_SHARED_LIBRARY)
 
-ifeq (0, 1)
+#include secure-omx component for haswell builds
+ifeq ($(TARGET_BOARD_PLATFORM),haswell)
 include $(CLEAR_VARS)
 
 LOCAL_CPPFLAGS :=
@@ -225,6 +226,18 @@ LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/libsepdrm
 LOCAL_SRC_FILES += securevideo/ctp/OMXVideoDecoderAVCSecure.cpp
 
 LOCAL_CFLAGS += -DVED_TILING
+else ifeq ($(TARGET_BOARD_PLATFORM),haswell)
+
+LOCAL_CFLAGS += -DUSE_AVC_SHORT_FORMAT
+
+LOCAL_C_INCLUDES += $(TOP)/vendor/intel/hardware/omx-components/videocodec/securevideo/haswell
+LOCAL_C_INCLUDES += $(TOP)/vendor/intel/hardware/omx-components/videocodec/securevideo/haswell/secvideoparser
+LOCAL_C_INCLUDES += $(TOP)/vendor/intel/hardware/PRIVATE/pavp/libpavp
+LOCAL_SRC_FILES += securevideo/haswell/OMXVideoDecoderAVCSecure.cpp
+
+LOCAL_SHARED_LIBRARIES += libpavp \
+                          libsecvideoparser
+
 endif
 
 ifeq ($(BUILD_WITH_SECURITY_FRAMEWORK),chaabi_token)
