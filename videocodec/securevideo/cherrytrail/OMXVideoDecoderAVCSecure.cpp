@@ -314,7 +314,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
 }
 
 OMX_COLOR_FORMATTYPE OMXVideoDecoderAVCSecure::GetOutputColorFormat(int width, int height) {
-    // BYT HWC expects Tiled output color format for all resolution
+    // CHT HWC expects Tiled output color format for all resolution
     return OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled;
 }
 

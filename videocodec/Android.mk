@@ -283,13 +283,31 @@ LOCAL_SRC_FILES += securevideo/merrifield/OMXVideoDecoderAVCSecure.cpp
 
 LOCAL_CFLAGS += -DVED_TILING
 
+else ifeq ($(TARGET_BOARD_PLATFORM),merrplus)
+#Secure AVC decoder for Merrifield Plus (uses IED)
+LOCAL_SHARED_LIBRARIES += \
+    libsepdrm_cc54 \
+    libdx_cc7
+
+LOCAL_SRC_FILES += securevideo/merrplus/OMXVideoDecoderAVCSecure.cpp
+
+LOCAL_CFLAGS += -DVED_TILING
+
 else ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
 #Secure AVC decoder for Baytrail (uses PAVP)
 LOCAL_C_INCLUDES += $(TOP)/vendor/intel/hardware/PRIVATE/ufo/inc/libpavp
 
-LOCAL_SHARED_LIBRARIES += libpavp 
+LOCAL_SHARED_LIBRARIES += libpavp
 
 LOCAL_SRC_FILES += securevideo/baytrail/OMXVideoDecoderAVCSecure.cpp
+
+else ifeq ($(TARGET_BOARD_PLATFORM),cherrytrail)
+#Secure AVC decoder for Cherrytrail (uses PAVP)
+LOCAL_C_INCLUDES += $(TOP)/vendor/intel/hardware/PRIVATE/ufo/inc/libpavp
+
+LOCAL_SHARED_LIBRARIES += libpavp
+
+LOCAL_SRC_FILES += securevideo/cherrytrail/OMXVideoDecoderAVCSecure.cpp
 
 endif
 

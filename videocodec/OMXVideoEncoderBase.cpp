@@ -361,8 +361,9 @@ OMX_ERRORTYPE OMXVideoEncoderBase::ProcessorInit(void) {
     ret = SetVideoEncoderParam();
     CHECK_STATUS("SetVideoEncoderParam");
 
-    if (mVideoEncoder->start() != ENCODE_SUCCESS) {
-        LOGE("Start failed, ret = 0x%08x\n", ret);
+    Encode_Status status = mVideoEncoder->start();
+    if (status != ENCODE_SUCCESS) {
+        LOGE("Start failed, status = 0x%08x\n", status);
         return OMX_ErrorUndefined;
     }
 
@@ -418,7 +419,6 @@ OMX_ERRORTYPE OMXVideoEncoderBase::BuildHandlerList(void) {
     AddHandler((OMX_INDEXTYPE)OMX_IndexStoreMetaDataInBuffers, GetStoreMetaDataInBuffers, SetStoreMetaDataInBuffers);
     AddHandler((OMX_INDEXTYPE)OMX_IndexExtSyncEncoding, GetSyncEncoding, SetSyncEncoding);
     AddHandler((OMX_INDEXTYPE)OMX_IndexExtPrependSPSPPS, GetPrependSPSPPS, SetPrependSPSPPS);
-
     return OMX_ErrorNone;
 }
 
@@ -568,7 +568,8 @@ OMX_ERRORTYPE OMXVideoEncoderBase::GetConfigIntelBitrate(OMX_PTR pStructure) {
 OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigIntelBitrate(OMX_PTR pStructure) {
     OMX_ERRORTYPE ret;
     Encode_Status retStatus = ENCODE_SUCCESS;
-    if (mParamIntelBitrate.eControlRate == OMX_Video_Intel_ControlRateMax) {
+    if ((mParamIntelBitrate.eControlRate == OMX_Video_Intel_ControlRateMax)&&
+		(mEncoderParams->profile != VAProfileVP8Version0_3)) {
         LOGE("SetConfigIntelBitrate failed. Feature is disabled.");
         return OMX_ErrorUnsupportedIndex;
     }
@@ -583,8 +584,9 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigIntelBitrate(OMX_PTR pStructure) {
     // TODO: return OMX_ErrorIncorrectStateOperation?
     CHECK_SET_CONFIG_STATE();
 
-    if (mParamIntelBitrate.eControlRate != OMX_Video_Intel_ControlRateVideoConferencingMode) {
-        LOGE("SetConfigIntelBitrate failed. Feature is supported only in VCM.");
+    if ((mParamIntelBitrate.eControlRate != OMX_Video_Intel_ControlRateVideoConferencingMode)&&
+		(mEncoderParams->profile != VAProfileVP8Version0_3)){
+        LOGE("SetConfigIntelBitrate failed. Feature is supported only in VCM for AVC/H264/MPEG4.");
         return OMX_ErrorUnsupportedSetting;
     }
     VideoConfigBitRate configBitRate;
@@ -613,10 +615,7 @@ OMX_ERRORTYPE OMXVideoEncoderBase::GetConfigIntelAIR(OMX_PTR pStructure) {
 OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigIntelAIR(OMX_PTR pStructure) {
     OMX_ERRORTYPE ret;
     Encode_Status retStatus = ENCODE_SUCCESS;
-    if (mParamIntelBitrate.eControlRate == OMX_Video_Intel_ControlRateMax) {
-        LOGE("SetConfigIntelAIR failed. Feature is disabled.");
-        return OMX_ErrorUnsupportedIndex;
-    }
+
     OMX_VIDEO_CONFIG_INTEL_AIR *p = (OMX_VIDEO_CONFIG_INTEL_AIR *)pStructure;
     CHECK_TYPE_HEADER(p);
     CHECK_PORT_INDEX(p, OUTPORT_INDEX);
@@ -627,11 +626,6 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigIntelAIR(OMX_PTR pStructure) {
     // return OMX_ErrorNone if not in Executing state
     // TODO: return OMX_ErrorIncorrectStateOperation?
     CHECK_SET_CONFIG_STATE();
-
-    if (mParamIntelBitrate.eControlRate != OMX_Video_Intel_ControlRateVideoConferencingMode) {
-        LOGE("SetConfigIntelAIR failed. Feature is supported only in VCM.");
-        return OMX_ErrorUnsupportedSetting;
-    }
 
     VideoConfigAIR configAIR;
     VideoConfigIntraRefreshType configIntraRefreshType;
@@ -669,10 +663,7 @@ OMX_ERRORTYPE OMXVideoEncoderBase::GetParamVideoIntraRefresh(OMX_PTR pStructure)
 OMX_ERRORTYPE OMXVideoEncoderBase::SetParamVideoIntraRefresh(OMX_PTR pStructure) {
     OMX_ERRORTYPE ret;
     Encode_Status retStatus = ENCODE_SUCCESS;
-    if (mParamIntelBitrate.eControlRate == OMX_Video_Intel_ControlRateMax) {
-        LOGE("SetConfigIntelAIR failed. Feature is disabled.");
-        return OMX_ErrorUnsupportedIndex;
-    }
+
     OMX_VIDEO_PARAM_INTRAREFRESHTYPE *p = (OMX_VIDEO_PARAM_INTRAREFRESHTYPE *)pStructure;
     CHECK_TYPE_HEADER(p);
     CHECK_PORT_INDEX(p, OUTPORT_INDEX);
@@ -684,10 +675,6 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetParamVideoIntraRefresh(OMX_PTR pStructure)
     // TODO: return OMX_ErrorIncorrectStateOperation?
     CHECK_SET_CONFIG_STATE();
 
-    if (mParamIntelBitrate.eControlRate != OMX_Video_Intel_ControlRateVideoConferencingMode) {
-        LOGE("SetConfigIntelAIR failed. Feature is supported only in VCM.");
-        return OMX_ErrorUnsupportedSetting;
-    }
 
     VideoConfigIntraRefreshType configIntraRefreshType;
     configIntraRefreshType.refreshType = (VideoIntraRefreshType)(mParamVideoRefresh.eRefreshMode + 1);
@@ -723,7 +710,8 @@ OMX_ERRORTYPE OMXVideoEncoderBase::GetConfigVideoFramerate(OMX_PTR pStructure) {
 OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigVideoFramerate(OMX_PTR pStructure) {
     OMX_ERRORTYPE ret;
     Encode_Status retStatus = ENCODE_SUCCESS;
-    if (mParamIntelBitrate.eControlRate == OMX_Video_Intel_ControlRateMax) {
+    if ((mParamIntelBitrate.eControlRate == OMX_Video_Intel_ControlRateMax)&&
+		(mEncoderParams->profile != VAProfileVP8Version0_3)){
         LOGE("SetConfigVideoFramerate failed. Feature is disabled.");
         return OMX_ErrorUnsupportedIndex;
     }
@@ -738,8 +726,9 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigVideoFramerate(OMX_PTR pStructure) {
     // TODO, return OMX_ErrorIncorrectStateOperation?
     CHECK_SET_CONFIG_STATE();
 
-    if (mParamIntelBitrate.eControlRate != OMX_Video_Intel_ControlRateVideoConferencingMode) {
-        LOGE("SetConfigIntelAIR failed. Feature is supported only in VCM.");
+    if ((mParamIntelBitrate.eControlRate != OMX_Video_Intel_ControlRateVideoConferencingMode)&&
+		(mEncoderParams->profile != VAProfileVP8Version0_3)){
+        LOGE("SetConfigIntelAIR failed. Feature is supported only in VCM for AVC/H264/MPEG4.");
         return OMX_ErrorUnsupportedSetting;
     }
     VideoConfigFrameRate framerate;
@@ -852,7 +841,7 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetStoreMetaDataInBuffers(OMX_PTR pStructure)
     uint32_t maxSize = 0;
 
     CHECK_TYPE_HEADER(p);
-    CHECK_PORT_INDEX(p, INPORT_INDEX);
+    //CHECK_PORT_INDEX(p, INPORT_INDEX);
 
     LOGD("SetStoreMetaDataInBuffers (enabled = %x)", p->bStoreMetaData);
     if(mStoreMetaDataInBuffers == p->bStoreMetaData)
