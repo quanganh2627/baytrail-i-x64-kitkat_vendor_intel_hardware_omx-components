@@ -66,6 +66,7 @@ include $(BUILD_SHARED_LIBRARY)
 
 PLATFORM_SUPPORT_VP8 := \
     merrifield \
+    morganfield \
     moorefield \
     baytrail
 
@@ -386,6 +387,7 @@ LOCAL_SHARED_LIBRARIES := \
         libva-android \
         libva-tpi \
         libutils \
+        libcutils \
         libhardware \
         libintelmetadatabuffer
 
@@ -424,6 +426,7 @@ LOCAL_SHARED_LIBRARIES := \
         libva-android \
         libva-tpi \
         libutils \
+        libcutils \
         libhardware \
         libintelmetadatabuffer
 
@@ -465,6 +468,7 @@ LOCAL_SHARED_LIBRARIES := \
         libva-android \
         libva-tpi \
         libutils \
+        libcutils \
         libhardware \
         libintelmetadatabuffer
 
@@ -546,6 +550,7 @@ LOCAL_SHARED_LIBRARIES := \
         libva-android \
         libva-tpi \
         libutils \
+        libcutils \
         libhardware \
         libintelmetadatabuffer
 
