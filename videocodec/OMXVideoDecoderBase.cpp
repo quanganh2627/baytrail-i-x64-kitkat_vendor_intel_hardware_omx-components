@@ -287,7 +287,6 @@ OMX_ERRORTYPE OMXVideoDecoderBase::ProcessorPreFreeBuffer(OMX_U32 nPortIndex, OM
 }
 
  OMX_ERRORTYPE OMXVideoDecoderBase::ProcessorPreFillBuffer(OMX_BUFFERHEADERTYPE* buffer) {
-
     if (mWorkingMode == GRAPHICBUFFER_MODE && buffer->nOutputPortIndex == OUTPORT_INDEX){
         Decode_Status status;
         if(mVideoDecoder == NULL){
@@ -481,6 +480,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::PrepareConfigBuffer(VideoConfigBuffer *p) {
 #endif
     p->width = paramPortDefinitionInput->format.video.nFrameWidth;
     p->height = paramPortDefinitionInput->format.video.nFrameHeight;
+
     return OMX_ErrorNone;
 }
 
@@ -534,7 +534,6 @@ OMX_ERRORTYPE OMXVideoDecoderBase::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE *buf
 
 OMX_ERRORTYPE OMXVideoDecoderBase::FillRenderBuffer(OMX_BUFFERHEADERTYPE **pBuffer, buffer_retain_t *retain,
     OMX_U32 inportBufferFlags, OMX_BOOL *isResolutionChange) {
-
     OMX_BUFFERHEADERTYPE *buffer = *pBuffer;
     OMX_BUFFERHEADERTYPE *buffer_orign = buffer;
     VideoErrorBuffer *ErrBufPtr = NULL;
@@ -662,11 +661,6 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
             force_realloc = 1;
         }
     }
-
-    LOGV("Original size = %lu x %lu, new size = %d x %d, cropped size = %d x %d",
-        paramPortDefinitionInput.format.video.nFrameWidth,
-        paramPortDefinitionInput.format.video.nFrameHeight,
-        width, height, widthCropped, heightCropped);
 
     if (!force_realloc &&
         widthCropped == paramPortDefinitionOutput.format.video.nFrameWidth &&
@@ -816,16 +810,23 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetParamVideoPortFormat(OMX_PTR pStructure) {
     return OMX_ErrorNone;
 }
 
-OMX_ERRORTYPE OMXVideoDecoderBase::GetNativeBufferUsage(OMX_PTR pStructure) {
+OMX_ERRORTYPE OMXVideoDecoderBase::GetNativeBufferUsageSpecific(OMX_PTR pStructure) {
      OMX_ERRORTYPE ret;
      GetAndroidNativeBufferUsageParams *param = (GetAndroidNativeBufferUsageParams*)pStructure;
      CHECK_TYPE_HEADER(param);
      param->nUsage |= GRALLOC_USAGE_HW_TEXTURE;
      return OMX_ErrorNone;
 }
-OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBufferUsage(OMX_PTR pStructure) {
+OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBufferUsageSpecific(OMX_PTR pStructure) {
     CHECK_SET_PARAM_STATE();
     return OMX_ErrorBadParameter;
+}
+
+OMX_ERRORTYPE OMXVideoDecoderBase::GetNativeBufferUsage(OMX_PTR pStructure) {
+    return this->GetNativeBufferUsageSpecific(pStructure);
+}
+OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBufferUsage(OMX_PTR pStructure) {
+    return this->SetNativeBufferUsageSpecific(pStructure);
 }
 
 OMX_ERRORTYPE OMXVideoDecoderBase::GetNativeBuffer(OMX_PTR pStructure) {
@@ -864,11 +865,19 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBuffer(OMX_PTR pStructure) {
 }
 
 OMX_ERRORTYPE OMXVideoDecoderBase::GetNativeBufferMode(OMX_PTR pStructure) {
+    return this->GetNativeBufferModeSpecific(pStructure);
+}
+
+OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBufferMode(OMX_PTR pStructure) {
+    return this->SetNativeBufferModeSpecific(pStructure);
+}
+
+OMX_ERRORTYPE OMXVideoDecoderBase::GetNativeBufferModeSpecific(OMX_PTR pStructure) {
     LOGE("GetNativeBufferMode is not implemented");
     return OMX_ErrorNotImplemented;
 }
 
-OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBufferMode(OMX_PTR pStructure) {
+OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBufferModeSpecific(OMX_PTR pStructure) {
     OMX_ERRORTYPE ret;
     EnableAndroidNativeBuffersParams *param = (EnableAndroidNativeBuffersParams*)pStructure;
 
@@ -900,7 +909,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBufferMode(OMX_PTR pStructure) {
                         port_def.format.video.nFrameHeight);
     port->SetPortDefinition(&port_def,true);
 
-     return OMX_ErrorNone;
+    return OMX_ErrorNone;
 }
 
 OMX_ERRORTYPE OMXVideoDecoderBase::GetDecoderRotation(OMX_PTR pStructure) {
@@ -935,8 +944,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetDecoderVppBufferNum(OMX_PTR pStructure) {
 }
 #endif
 
-OMX_ERRORTYPE OMXVideoDecoderBase::GetDecoderOutputCrop(OMX_PTR pStructure) {
-
+OMX_ERRORTYPE OMXVideoDecoderBase::GetDecoderOutputCropSpecific(OMX_PTR pStructure) {
     OMX_ERRORTYPE ret;
     OMX_CONFIG_RECTTYPE *rectParams = (OMX_CONFIG_RECTTYPE *)pStructure;
 
@@ -957,8 +965,16 @@ OMX_ERRORTYPE OMXVideoDecoderBase::GetDecoderOutputCrop(OMX_PTR pStructure) {
     }
 }
 
-OMX_ERRORTYPE OMXVideoDecoderBase::SetDecoderOutputCrop(OMX_PTR pStructure) {
+OMX_ERRORTYPE OMXVideoDecoderBase::SetDecoderOutputCropSpecific(OMX_PTR pStructure) {
     return OMX_ErrorUnsupportedSetting;
+}
+
+OMX_ERRORTYPE OMXVideoDecoderBase::SetDecoderOutputCrop(OMX_PTR pStructure) {
+    return this->SetDecoderOutputCropSpecific(pStructure);
+}
+
+OMX_ERRORTYPE OMXVideoDecoderBase::GetDecoderOutputCrop(OMX_PTR pStructure) {
+    return this->GetDecoderOutputCropSpecific(pStructure);
 }
 
 OMX_ERRORTYPE OMXVideoDecoderBase::GetErrorReportMode(OMX_PTR pStructure) {
