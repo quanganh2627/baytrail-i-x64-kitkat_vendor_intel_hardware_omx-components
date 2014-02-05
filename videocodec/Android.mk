@@ -11,6 +11,7 @@ LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
 LOCAL_SHARED_LIBRARIES := \
+	libsharedbuffer \
     libwrs_omxil_common \
     libva_videodecoder \
     liblog \
@@ -55,6 +56,7 @@ LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
 LOCAL_SHARED_LIBRARIES := \
+	libsharedbuffer \
     libwrs_omxil_common \
     libva_videodecoder \
     liblog \
@@ -86,6 +88,7 @@ LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
 LOCAL_SHARED_LIBRARIES := \
+	libsharedbuffer \
     libwrs_omxil_common \
     libva_videodecoder \
     liblog \
@@ -120,6 +123,7 @@ LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
 LOCAL_SHARED_LIBRARIES := \
+	libsharedbuffer \
     libwrs_omxil_common \
     libva_videodecoder \
     liblog \
@@ -154,6 +158,7 @@ LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
 LOCAL_SHARED_LIBRARIES := \
+	libsharedbuffer \
     libwrs_omxil_common \
     libva_videodecoder \
     liblog \
@@ -194,6 +199,7 @@ LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
 LOCAL_SHARED_LIBRARIES := \
+	libsharedbuffer \
     libwrs_omxil_common \
     libdrm \
     libva_videodecoder \
@@ -293,6 +299,7 @@ LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
 LOCAL_SHARED_LIBRARIES := \
+	libsharedbuffer \
         libwrs_omxil_common \
         liblog \
         libva_videoencoder \
@@ -339,6 +346,7 @@ LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
 LOCAL_SHARED_LIBRARIES := \
+	libsharedbuffer \
         libwrs_omxil_common \
         liblog \
         libva_videoencoder \
@@ -388,6 +396,7 @@ LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
 LOCAL_SHARED_LIBRARIES := \
+	libsharedbuffer \
         libwrs_omxil_common \
         liblog \
         libva_videoencoder \
@@ -433,6 +442,7 @@ LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
 LOCAL_SHARED_LIBRARIES := \
+	libsharedbuffer \
     libwrs_omxil_common \
     libva_videodecoder \
     liblog \
@@ -467,6 +477,7 @@ LOCAL_CPPFLAGS :=
 LOCAL_LDFLAGS :=
 
 LOCAL_SHARED_LIBRARIES := \
+	libsharedbuffer \
         libwrs_omxil_common \
         liblog \
         libva_videoencoder \
