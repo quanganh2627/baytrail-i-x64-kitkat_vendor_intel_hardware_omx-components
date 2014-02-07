@@ -185,9 +185,6 @@ LOCAL_CFLAGS += -DDEINTERLACE_EXT
 endif
 
 include $(BUILD_SHARED_LIBRARY)
-
-#include secure-omx component for haswell builds
-ifeq ($(TARGET_BOARD_PLATFORM),haswell)
 include $(CLEAR_VARS)
 
 LOCAL_CPPFLAGS :=
@@ -279,13 +276,41 @@ LOCAL_SRC_FILES += securevideo/baytrail/OMXVideoDecoderAVCSecure.cpp
 LOCAL_CFLAGS += -DVED_TILING
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
+
+LOCAL_COPY_HEADERS_TO := secvideoparser
+LOCAL_COPY_HEADERS := securevideo/baytrail/secvideoparser/secvideoparser.h
+
+LOCAL_SHARED_LIBRARIES += libstlport \
+                          libutils \
+                          libz \
+                          libdl \
+                          libcrypto \
+                          libssl \
+                          libicuuc \
+                          libcutils \
+                          libc \
+                          libmeimm \
+                          libpavp \
+                          libsecvideoparser
+
+LOCAL_C_INCLUDES += bionic \
+                    external/stlport/stlport \
+                    external/openssl/include \
+                    external/libxml2/include \
+                    $(TARGET_OUT_HEADERS)/secvideoparser \
+                    $(LOCAL_PATH)/securevideo/baytrail/ \
+                    $(TOP)/vendor/intel/hardware/txei/meimm/ \
+                    $(TOP)/vendor/intel/hardware/PRIVATE/ufo/include
+
+LOCAL_SRC_FILES += securevideo/baytrail/OMXVideoDecoderAVCSecure.cpp
+
+LOCAL_CFLAGS += -DVED_TILING
+endif
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderAVCSecure
-
-
 include $(BUILD_SHARED_LIBRARY)
-endif
 
 include $(CLEAR_VARS)
 
