@@ -997,10 +997,16 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
     return ret;
 }
 
+OMX_COLOR_FORMATTYPE OMXVideoDecoderAVCSecure::GetOutputColorFormat(int width, int height) {
+    // HWC expects Tiled output color format for all resolution
+    return OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled;
+}
+
 OMX_ERRORTYPE OMXVideoDecoderAVCSecure::BuildHandlerList(void) {
     OMXVideoDecoderBase::BuildHandlerList();
     AddHandler(OMX_IndexParamVideoAvc, GetParamVideoAvc, SetParamVideoAvc);
     AddHandler(OMX_IndexParamVideoProfileLevelQuerySupported, GetParamVideoAVCProfileLevel, SetParamVideoAVCProfileLevel);
+    AddHandler(static_cast<OMX_INDEXTYPE> (OMX_IndexExtEnableNativeBuffer), GetNativeBufferMode, SetNativeBufferMode);
     return OMX_ErrorNone;
 }
 
@@ -1044,6 +1050,24 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::GetParamVideoAVCProfileLevel(OMX_PTR pSt
 OMX_ERRORTYPE OMXVideoDecoderAVCSecure::SetParamVideoAVCProfileLevel(OMX_PTR pStructure) {
     ALOGW("SetParamVideoAVCProfileLevel is not supported.");
     return OMX_ErrorUnsupportedSetting;
+}
+
+OMX_ERRORTYPE OMXVideoDecoderAVCSecure::GetNativeBufferMode(OMX_PTR pStructure) {
+    LOGE("GetNativeBufferMode is not implemented");
+    return OMX_ErrorNotImplemented;
+}
+
+OMX_ERRORTYPE OMXVideoDecoderAVCSecure::SetNativeBufferMode(OMX_PTR pStructure) {
+    OMXVideoDecoderBase::SetNativeBufferMode(pStructure);
+    PortVideo *port = NULL;
+    port = static_cast<PortVideo *>(this->ports[OUTPORT_INDEX]);
+
+    OMX_PARAM_PORTDEFINITIONTYPE port_def;
+    memcpy(&port_def,port->GetPortDefinition(),sizeof(port_def));
+    port_def.format.video.eColorFormat = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled;
+    port->SetPortDefinition(&port_def,true);
+
+    return OMX_ErrorNone;
 }
 
 OMX_U8* OMXVideoDecoderAVCSecure::MemAllocSEC(OMX_U32 nSizeBytes, OMX_PTR pUserData) {
