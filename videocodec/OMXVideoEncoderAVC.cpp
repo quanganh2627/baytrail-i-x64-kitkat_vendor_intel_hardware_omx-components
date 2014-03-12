@@ -341,7 +341,7 @@ OMX_BOOL OMXVideoEncoderAVC::ProcessCacheOperation(OMX_BUFFERHEADERTYPE **buffer
 
     //get frame encode info
     Encode_Info eInfo;
-    uint32_t encodeInfo 	= (uint32_t) buffers[INPORT_INDEX]->pPlatformPrivate;
+    uintptr_t encodeInfo 	= (uintptr_t) buffers[INPORT_INDEX]->pPlatformPrivate;
     eInfo.FrameType 		   = GET_FT(encodeInfo);
 
     eInfo.CacheOperation	= GET_CO(encodeInfo);
@@ -397,7 +397,7 @@ OMX_BOOL OMXVideoEncoderAVC::ProcessCacheOperation(OMX_BUFFERHEADERTYPE **buffer
                     //all these frames except final B frame in miniGOP can't be stopped at any time
                     //to avoid not breaking miniGOP integrity
                     if (i > 0) {
-                        uint32_t tmp = (uint32_t) omxbuf->pPlatformPrivate;
+                        uintptr_t tmp = (uintptr_t) omxbuf->pPlatformPrivate;
                         tmp |= ENC_NSTOP;
                         omxbuf->pPlatformPrivate = (OMX_PTR) tmp;
                     }
@@ -584,7 +584,7 @@ OMX_ERRORTYPE OMXVideoEncoderAVC::ProcessorProcess(
 
         //get frame encode info
         Encode_Info eInfo;
-        uint32_t encodeInfo 	= (uint32_t) buffers[INPORT_INDEX]->pPlatformPrivate;
+        uintptr_t encodeInfo 	= (uintptr_t) buffers[INPORT_INDEX]->pPlatformPrivate;
         eInfo.FrameType 		   = GET_FT(encodeInfo);
         eInfo.CacheOperation	= GET_CO(encodeInfo);
         eInfo.NotStopFrame		= encodeInfo & ENC_NSTOP;

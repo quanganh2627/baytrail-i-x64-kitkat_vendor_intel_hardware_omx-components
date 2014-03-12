@@ -108,7 +108,7 @@ OMX_ERRORTYPE OMXVideoEncoderMPEG4::ProcessorProcess(
     inBuf.flag = 0;
     inBuf.timeStamp = buffers[INPORT_INDEX]->nTimeStamp;
 
-    LOGV("inBuf.data=%x, size=%d", (unsigned)inBuf.data, inBuf.size);
+    LOGV("inBuf.data=%p, size=%d", (unsigned long)inBuf.data, inBuf.size);
 
     outBuf.data =
         buffers[OUTPORT_INDEX]->pBuffer + buffers[OUTPORT_INDEX]->nOffset;

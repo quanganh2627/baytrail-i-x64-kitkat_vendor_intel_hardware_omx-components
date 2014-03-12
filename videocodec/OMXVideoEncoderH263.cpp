@@ -117,8 +117,8 @@ OMX_ERRORTYPE OMXVideoEncoderH263::ProcessorProcess(
     inBuf.flag = 0;
     inBuf.timeStamp = buffers[INPORT_INDEX]->nTimeStamp;
 
-    LOGV("buffer_in.data=%x, data_size=%d",
-         (unsigned)inBuf.data, inBuf.size);
+    LOGV("buffer_in.data=%p, data_size=%d",
+         (unsigned long)inBuf.data, inBuf.size);
 
     outBuf.data =	buffers[OUTPORT_INDEX]->pBuffer + buffers[OUTPORT_INDEX]->nOffset;
     outBuf.bufferSize = buffers[OUTPORT_INDEX]->nAllocLen - buffers[OUTPORT_INDEX]->nOffset;
