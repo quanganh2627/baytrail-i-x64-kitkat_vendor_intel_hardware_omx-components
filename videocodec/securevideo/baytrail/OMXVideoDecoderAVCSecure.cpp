@@ -242,7 +242,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::MdrmInjectKey(uint8_t in_session_id, uin
     input.Header.Status = 0;
     input.Header.BufferLength = sizeof(input)-sizeof(PAVP_CMD_HEADER);
     input.session_id = in_session_id;
-    input.StreamId = mPAVPAppID;
+//    input.StreamId = mPAVPAppID;
     memcpy(input.key_id, in_key_id, 16);
 
     return SecPassThrough((uint8_t*)&input, sizeof(input), (uint8_t*)&output, sizeof(output));
@@ -261,7 +261,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::WvSetTranscriptKey(void) {
     input.Header.ApiVersion = WV_API_VERSION;
     input.Header.CommandId =  wv_set_xcript_key;
     input.Header.Status = 0;
-    input.StreamId = mPAVPAppID;
+//    input.StreamId = mPAVPAppID;
     input.Header.BufferLength = sizeof(input)-sizeof(PAVP_CMD_HEADER);
 
     return SecPassThrough((uint8_t*)&input, sizeof(input), (uint8_t*)&output, sizeof(output));
