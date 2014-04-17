@@ -601,4 +601,51 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoEncoderVP8
 include $(BUILD_SHARED_LIBRARY)
 
+# VPP
+include $(CLEAR_VARS)
+ifeq ($(TARGET_HAS_VPP),true)
+LOCAL_CFLAGS += -DTARGET_HAS_VPP
+endif
+ifeq ($(TARGET_HAS_MULTIPLE_DISPLAY),true)
+LOCAL_CFLAGS += -DTARGET_HAS_MULTIPLE_DISPLAY
+endif
+
+LOCAL_CPPFLAGS :=
+LOCAL_LDFLAGS :=
+
+LOCAL_SHARED_LIBRARIES := \
+        libwrs_omxil_common \
+        liblog \
+        libva_videoencoder \
+        libva \
+        libva-android \
+        libva-tpi \
+        libutils \
+        libcutils \
+        libhardware \
+        libintelmetadatabuffer
+LOCAL_SHARED_LIBRARIES += libbinder libmultidisplay
+LOCAL_LDFLAGS += -L$(TARGET_OUT_SHARED_LIBRARIES) -livp
+
+LOCAL_C_INCLUDES := \
+    $(TARGET_OUT_HEADERS)/wrs_omxil_core \
+    $(TARGET_OUT_HEADERS)/khronos/openmax \
+    $(TARGET_OUT_HEADERS)/libva \
+	$(TARGET_OUT_HEADERS)/libmedia_utils_vpp \
+    $(call include-path-for, frameworks-native)/media/hardware \
+    $(call include-path-for, frameworks-native)/media/openmax \
+    $(call include-path-for, frameworks-av)/ \
+
+LOCAL_SRC_FILES := \
+    OMXComponentCodecBase.cpp \
+    OMXVideoPPBase.cpp \
+	PPWorker.cpp \
+	VPPMds.cpp
+
+LOCAL_CFLAGS += $(LOCAL_C_FLAGS)
+
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := libOMXVideoPP
+include $(BUILD_SHARED_LIBRARY)
+
 endif
