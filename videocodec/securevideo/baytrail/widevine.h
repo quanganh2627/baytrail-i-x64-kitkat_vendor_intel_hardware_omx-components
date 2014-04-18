@@ -125,7 +125,7 @@ typedef struct _PAVP_CMD_HEADER
 typedef struct _PAVP_CMD_NODATA
 {
    PAVP_CMD_HEADER Header;
-   // no data follows header   
+   // no data follows header
 } PAVP_CMD_NODATA;
 
 typedef int BOOL;
@@ -336,7 +336,9 @@ typedef PAVP_CMD_NODATA wv_set_xcript_key_in;
 //for app-ID
 typedef struct {
     PAVP_CMD_HEADER  Header;
+#ifdef USE_PAVP_APP_ID
     uint32_t StreamId;
+#endif
 } wv_set_xcript_key_in;
 
 typedef struct {
