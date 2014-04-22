@@ -1,6 +1,6 @@
 /*
 
-* Copyright (c) 2009-2013 Intel Corporation.  All rights reserved.
+* Copyright (c) 2009-2014 Intel Corporation.  All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -32,11 +32,72 @@
 static const char* AVC_MIME_TYPE = "video/avc";
 static const char* AVC_SECURE_MIME_TYPE = "video/avc-secure";
 
+// Temp placeholder for NALU merge
+static uint8_t config_nalu[1024];
+static uint32_t config_nalu_len;
+// Merge NALU for config (SPS & PPS) with Slice data for MDRM.
+static void update_config_nalu(uint8_t* nalu_data, uint32_t* nalu_size)
+{
+    //move NALU for encrypted portion behind config info
+    uint8_t temp[1024];
+    memset(temp, 0, 1024);
+
+    uint32_t* enc_dword_ptr = NULL;
+    uint32_t enc_num_nalus = 0;
+    uint32_t* clr_dword_ptr = NULL;
+    uint32_t clr_num_nalus = 0;
+    uint32_t len = 0;
+    uint32_t t_len = 0;
+    uint32_t offset = 0;
+
+    if (*nalu_size > 4) {
+        memcpy(temp, nalu_data+4, ((*nalu_size)-4));
+    } else {
+        LOGI("NALU size < 4! \n");
+        return;
+    }
+
+    enc_dword_ptr = (uint32_t*)nalu_data;
+    enc_num_nalus = bswap_32(*enc_dword_ptr);
+    clr_dword_ptr = (uint32_t*)config_nalu;
+    clr_num_nalus = bswap_32(*clr_dword_ptr);
+
+    clr_dword_ptr = (uint32_t *)(config_nalu+8);
+    len = bswap_32(*clr_dword_ptr);
+    len = ((len+3)>>2)<<2;
+    t_len = 16 + len;
+    for( uint32_t i = 0; i < clr_num_nalus; i++ )
+    {
+    	memcpy( nalu_data+offset, config_nalu+offset, t_len );
+    	enc_dword_ptr = (uint32_t *)(config_nalu+offset+t_len-len-12);
+    	(*enc_dword_ptr) = bswap_32(0);
+    	offset += t_len;
+    	clr_dword_ptr = (uint32_t *)(config_nalu+offset+4);
+        len = bswap_32(*clr_dword_ptr);
+    	len = ((len+3)>>2)<<2;
+    	t_len = 12 + len;
+    }
+
+    // ignore first 4 len bytes
+    memcpy((nalu_data + config_nalu_len), temp, ((*nalu_size)-4));
+
+    enc_dword_ptr = (uint32_t*)nalu_data;
+    (*enc_dword_ptr) = bswap_32(enc_num_nalus + clr_num_nalus);
+    enc_num_nalus = (*enc_dword_ptr);
+    *nalu_size = ((*nalu_size) + config_nalu_len - 4);
+
+    enc_dword_ptr = (uint32_t*)nalu_data;
+    enc_dword_ptr++;
+    (*enc_dword_ptr) = bswap_32(0);
+
+}
+
 OMXVideoDecoderAVCSecure::OMXVideoDecoderAVCSecure()
     : mpLibInstance(NULL),
       mPAVPAppID(0xFF),
       mDropUntilIDR(false) {
     LOGV("OMXVideoDecoderAVCSecure is constructed.");
+    LOGI("MDRM_OMX_VERSION: %.4f \n", MDRM_OMX_VERSION);
     mVideoDecoder = createVideoDecoder(AVC_SECURE_MIME_TYPE);
     if (!mVideoDecoder) {
         LOGE("createVideoDecoder failed for \"%s\"", AVC_SECURE_MIME_TYPE);
@@ -124,50 +185,6 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareConfigBuffer(VideoConfigBuffer *p
     return ret;
 }
 
-// Temp placeholder for NALU merge
-static uint8_t config_nalu[1024];
-static uint32_t config_nalu_len;
-// Merge NALU for config (SPS & PPS) with Slice data for MDRM.
-static void update_config_nalu(uint8_t* nalu_data, uint32_t* nalu_size)
-{
-    //move NALU for encrypted portion behind config info
-    uint8_t temp[1024];
-    memset(temp, 0, 1024);
-
-    uint32_t* enc_dword_ptr = NULL;
-    uint32_t enc_num_nalus = 0;
-    uint32_t* clr_dword_ptr = NULL;
-    uint32_t clr_num_nalus = 0;
-
-    if (*nalu_size > 4) {
-        memcpy(temp, nalu_data+4, ((*nalu_size)-4));
-    } else {
-        LOGI("%s: NALU size < 4!");
-        return;
-    }
-
-    enc_dword_ptr = (uint32_t*)nalu_data;
-    enc_num_nalus = bswap_32(*enc_dword_ptr);
-    clr_dword_ptr = (uint32_t*)config_nalu;
-    clr_num_nalus = bswap_32(*clr_dword_ptr);
-
-    enc_dword_ptr = (uint32_t*)(config_nalu + (config_nalu_len-16));
-    (*enc_dword_ptr) = bswap_32(0);
-    //copy config nalu
-    memcpy(nalu_data, config_nalu, config_nalu_len);
-    // ignore first 4 len bytes
-    memcpy((nalu_data + config_nalu_len), temp, ((*nalu_size)-4));
-
-    enc_dword_ptr = (uint32_t*)nalu_data;
-    (*enc_dword_ptr) = bswap_32(enc_num_nalus + clr_num_nalus);
-    enc_num_nalus = (*enc_dword_ptr);
-    *nalu_size = ((*nalu_size) + config_nalu_len - 4);
-
-    enc_dword_ptr = (uint32_t*)nalu_data;
-    enc_dword_ptr++;
-    (*enc_dword_ptr) = bswap_32(0);
-
-}
 // Create PAVP Session & retrieve associated PAVP AppID.
 OMX_ERRORTYPE OMXVideoDecoderAVCSecure::CreatePavpSession(void) {
     if(!mpLibInstance) {
@@ -176,7 +193,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::CreatePavpSession(void) {
     }
     pavp_lib_session::pavp_lib_code rc = pavp_lib_session::status_ok;
 
-    LOGI("PAVP Heavy session creation...");
+    LOGI("PAVP Heavy session creation...\n");
 
     rc = mpLibInstance->pavp_create_session(true);
     if (rc != pavp_lib_session::status_ok) {
@@ -184,14 +201,14 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::CreatePavpSession(void) {
         return OMX_ErrorNotReady;
     }
 
-    LOGI("Get AppId of the PAVP Heavy session...");
+    LOGI("Get AppId of the PAVP Heavy session...\n");
 
     rc = mpLibInstance->pavp_get_app_id(reinterpret_cast<UINT&>(mPAVPAppID));
     if (rc != pavp_lib_session::status_ok) {
         LOGE("PAVP Heavy: pavp_get_app_id failed with error 0x%x", rc);
         return OMX_ErrorNotReady;
     } else {
-        LOGE("pavp_get_app_id succesful, uiAppId = 0x%x", mPAVPAppID);
+        LOGI("pavp_get_app_id succesful, uiAppId = 0x%x\n", mPAVPAppID);
     }
     return OMX_ErrorNone;
 }
@@ -217,7 +234,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::SecPassThrough(uint8_t* pInput, uint32_t
     }
     PAVP_CMD_HEADER *pHeader = (PAVP_CMD_HEADER*)pOutput;
     if (pHeader->Status) {
-        LOGE("SEC failed: wv_set_xcript_key() FAILED 0x%x", pHeader->Status);
+        LOGE("SEC Failed: SecPassThrough: FAILED 0x%x", pHeader->Status);
         return OMX_ErrorNotReady;
     }
     return OMX_ErrorNone;
@@ -238,7 +255,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::MdrmInjectKey(uint8_t in_session_id, uin
     conf.dest_encrypt_mode_25_24 = 1;//PR 0
 
     input.conf = conf;
-    input.Header.ApiVersion = 0x00010005;
+    input.Header.ApiVersion = MDRM_API_VERSION;
     input.Header.CommandId =  wv2_inject_key;
     input.Header.Status = 0;
     input.Header.BufferLength = sizeof(input)-sizeof(PAVP_CMD_HEADER);
@@ -323,7 +340,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ModularProcessVideoFrame(SECVideoBuffer 
     memset(&input, 0, sizeof(input));
     memset(&output, 0, sizeof(wv2_process_video_frame_out));
 
-    input.Header.ApiVersion = 0x00010005;
+    input.Header.ApiVersion = MDRM_API_VERSION;
     input.Header.CommandId = wv2_process_video_frame;
     input.Header.Status = 0;
     input.Header.BufferLength = sizeof(input) - sizeof(PAVP_CMD_HEADER);
@@ -371,6 +388,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ModularProcessVideoFrame(SECVideoBuffer 
 	}
         ret = SecPassThrough((uint8_t*)&input, sizeof(input), (uint8_t*)&output, sizeof(output));
         *parsed_data_size = output.parsed_data_size;
+        memcpy(secBuffer->iv, output.iv, 16);
    }
    secBuffer->pes_packet_count = 0;
    return ret;
@@ -391,9 +409,9 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ManagePAVPSession(bool force_recreate) {
 
     if (!balive || force_recreate) {
 
-        LOGI("PAVP session is %s", balive?"active":"in-active");
+        LOGI("PAVP session is %s", balive?"active":"in-active\n");
         //Destroy & re-create
-        LOGI("Destroying the PAVP session...");
+        LOGI("Destroying the PAVP session...\n");
         rc = mpLibInstance->pavp_destroy_session();
         if (rc != pavp_lib_session::status_ok) {
             LOGE("pavp_destroy_session failed with error 0x%x", rc);
@@ -493,7 +511,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
 	    &(parsedFrame->pavp_info), parsedFrame->nalu_data, parsedFrame->nalu_data_size,
 	    &(parsedFrame->frame_info));
 
-	if(parsedFrame->frame_info.num_nalus == 0 ) {
+	if((ret != OMX_ErrorNone) || (parsedFrame->frame_info.num_nalus == 0 )) {
 	    LOGE("NALU parsing failed - num_nalus = 0!");
 	    ret = OMX_ErrorNotReady;
 	}
@@ -677,6 +695,11 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ConstructFrameInfo(
     uint8_t* nalu_data,
     uint32_t nalu_data_size,
     frame_info_t* frame_info) {
+
+    if(!frame_data || !pavp_info || !nalu_data) {
+        LOGE("%s NULL input", __FUNCTION__);
+        return OMX_ErrorNotReady;
+    }
 
     uint32_t* dword_ptr = (uint32_t*)nalu_data;
     uint8_t* byte_ptr = NULL;
