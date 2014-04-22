@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2009-2013 Intel Corporation.  All rights reserved.
+* Copyright (c) 2009-2014 Intel Corporation.  All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -26,6 +26,9 @@
 #define SEC_DMA_ALIGN(x)            (((x)+0x1F)&(~0x1F))
 #define DRM_TYPE_CLASSIC_WV 0x0
 #define DRM_TYPE_MDRM 0x1 
+#define MDRM_API_VERSION  0x00010005
+#define MDRM_OMX_VERSION  2.0001
+
 
 //  Must match the same structs defined in WVCrypto.h
 #pragma pack(push, 1)
@@ -119,7 +122,6 @@ typedef struct {
 	uint32_t				parsed_data_size;
         uint8_t             key_id[16];
         uint8_t             key[16];
-       // uint32_t             frame_size;
 	uint8_t					iv[16];
 } process_video_frame_out;
 
@@ -135,7 +137,6 @@ typedef struct {
 
 typedef struct {
       PAVP_CMD_HEADER               Header;
-//    uint8_t                         enc_content_key[16];
 } wv2_inject_key_out;
 
 
@@ -152,11 +153,10 @@ typedef struct {
     uint8_t          key_id[16];
 } wv2_process_video_frame_in;
 
-//typedef PAVP_CMD_NODATA wv2_process_video_frame_out
 typedef struct {
     PAVP_CMD_HEADER  Header;
     uint32_t         parsed_data_size;;
-    //uint8_t          iv[16];    ////////this is temporary
+    uint8_t          iv[16];
 } wv2_process_video_frame_out;
 
 class OMXVideoDecoderAVCSecure : public OMXVideoDecoderBase {
