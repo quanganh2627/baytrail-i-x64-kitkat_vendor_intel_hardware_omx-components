@@ -77,6 +77,7 @@ protected:
     DECLARE_HANDLER(OMXVideoDecoderBase, DecoderVppBufferNum);
 #endif
     DECLARE_HANDLER(OMXVideoDecoderBase, ErrorReportMode);
+    DECLARE_HANDLER(OMXVideoDecoderBase, ErrorBuffers);
 
 private:
     enum {
@@ -116,6 +117,7 @@ protected:
     };
     WorkingMode mWorkingMode;
     bool mErrorReportEnabled;
+    OMX_VIDEO_OUTPUT_ERROR_BUFFERS mErrorBuffers;
 };
 
 #endif /* OMX_VIDEO_DECODER_BASE_H_ */

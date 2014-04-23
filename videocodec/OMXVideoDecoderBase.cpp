@@ -34,6 +34,7 @@ OMXVideoDecoderBase::OMXVideoDecoderBase()
       mWorkingMode(RAWDATA_MODE),
       mErrorReportEnabled (false) {
       memset(&mGraphicBufferParam, 0, sizeof(mGraphicBufferParam));
+      memset(&mErrorBuffers, 0, sizeof(mErrorBuffers));
 }
 
 OMXVideoDecoderBase::~OMXVideoDecoderBase() {
@@ -537,6 +538,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::FillRenderBuffer(OMX_BUFFERHEADERTYPE **pBuff
     OMX_BUFFERHEADERTYPE *buffer = *pBuffer;
     OMX_BUFFERHEADERTYPE *buffer_orign = buffer;
     VideoErrorBuffer *ErrBufPtr = NULL;
+    VideoErrorBuffer errBuf;
 
     if (mWorkingMode != GRAPHICBUFFER_MODE && buffer->pPlatformPrivate) {
         VideoRenderBuffer *p = (VideoRenderBuffer *)buffer->pPlatformPrivate;
@@ -546,14 +548,14 @@ OMX_ERRORTYPE OMXVideoDecoderBase::FillRenderBuffer(OMX_BUFFERHEADERTYPE **pBuff
 
     if (mWorkingMode == GRAPHICBUFFER_MODE && mErrorReportEnabled) {
         if (buffer->pOutputPortPrivate == NULL)
-            LOGE("The App doesn't provide the output buffer for error reporting");
+            LOGV("The App doesn't provide the output buffer for error reporting");
         else
             ErrBufPtr = (VideoErrorBuffer *)buffer->pOutputPortPrivate;
     }
 
     bool draining = (inportBufferFlags & OMX_BUFFERFLAG_EOS);
     //pthread_mutex_lock(&mSerializationLock);
-    const VideoRenderBuffer *renderBuffer = mVideoDecoder->getOutput(draining, ErrBufPtr);
+    const VideoRenderBuffer *renderBuffer = mVideoDecoder->getOutput(draining, &errBuf);
     //pthread_mutex_unlock(&mSerializationLock);
     if (renderBuffer == NULL) {
         buffer->nFilledLen = 0;
@@ -586,12 +588,25 @@ OMX_ERRORTYPE OMXVideoDecoderBase::FillRenderBuffer(OMX_BUFFERHEADERTYPE **pBuff
             VideoErrorBuffer *ErrBufOutPtr = NULL;
             ErrBufOutPtr = (VideoErrorBuffer *)buffer->pOutputPortPrivate;
             if (ErrBufPtr && ErrBufOutPtr) {
-                memcpy(ErrBufOutPtr, ErrBufPtr, sizeof(VideoErrorBuffer));
+                memcpy(ErrBufOutPtr, &errBuf, sizeof(VideoErrorBuffer));
                 memset(ErrBufPtr, 0, sizeof(VideoErrorBuffer));
             }
             *retain = BUFFER_RETAIN_OVERRIDDEN;
+        } else {
+            if(ErrBufPtr) memcpy(ErrBufPtr, &errBuf, sizeof(VideoErrorBuffer));
         }
-         buffer->nFilledLen = sizeof(OMX_U8*);
+        buffer->nFilledLen = sizeof(OMX_U8*);
+        if(mErrorReportEnabled && (renderBuffer->graphicBufferIndex < MAX_ERR_BUFFERS)) {
+            if(errBuf.errorNumber > 0) {
+                memcpy(&(mErrorBuffers.errorBuffers[renderBuffer->graphicBufferIndex]), &errBuf, sizeof(VideoErrorBuffer));
+                buffer->pPlatformPrivate = (void *)renderBuffer->graphicBufferIndex;
+            } else {
+                buffer->pPlatformPrivate = (void *)0xffffffff; // means no error for this buffer
+                memset(&(mErrorBuffers.errorBuffers[renderBuffer->graphicBufferIndex]), 0, sizeof(VideoErrorBuffer));
+            }
+        } else {
+            if(mErrorReportEnabled) LOGE("The erro buffer number is smaller than the Graphic buffer, please increase the error buffer number");
+        }
     } else {
         uint32_t size = 0;
         Decode_Status status = mVideoDecoder->getRawDataFromSurface(const_cast<VideoRenderBuffer *>(renderBuffer), buffer->pBuffer + buffer->nOffset, &size, false);
@@ -767,6 +782,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::BuildHandlerList(void) {
 #endif
     AddHandler(OMX_IndexConfigCommonOutputCrop, GetDecoderOutputCrop, SetDecoderOutputCrop);
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtEnableErrorReport), GetErrorReportMode, SetErrorReportMode);
+    AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtOutputErrorBuffers), GetErrorBuffers, SetErrorBuffers);
 
     return OMX_ErrorNone;
 }
@@ -963,6 +979,23 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetErrorReportMode(OMX_PTR pStructure) {
     mVideoDecoder->enableErrorReport(mErrorReportEnabled);
     return OMX_ErrorNone;
 }
+
+OMX_ERRORTYPE OMXVideoDecoderBase::GetErrorBuffers(OMX_PTR pStructure) {
+
+    OMX_ERRORTYPE ret;
+
+    OMX_VIDEO_OUTPUT_ERROR_BUFFERS *p = (OMX_VIDEO_OUTPUT_ERROR_BUFFERS *)pStructure;
+    CHECK_TYPE_HEADER(p);
+    CHECK_PORT_INDEX(p, OUTPORT_INDEX);
+    memcpy(p, &mErrorBuffers, sizeof(OMX_VIDEO_OUTPUT_ERROR_BUFFERS));
+    return OMX_ErrorNone;
+}
+
+OMX_ERRORTYPE OMXVideoDecoderBase::SetErrorBuffers(OMX_PTR pStructure) {
+    LOGE("SetErrorBuffers is not implemented");
+    return OMX_ErrorNotImplemented;
+}
+
 
 OMX_COLOR_FORMATTYPE OMXVideoDecoderBase::GetOutputColorFormat(int width, int height) {
 #ifndef VED_TILING
