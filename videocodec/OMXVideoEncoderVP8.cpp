@@ -40,10 +40,10 @@ OMX_ERRORTYPE OMXVideoEncoderVP8::InitOutputPortFormatSpecific(OMX_PARAM_PORTDEF
     paramPortDefinitionOutput->format.video.eCompressionFormat = OMX_VIDEO_CodingVP8;
 
     // OMX_VIDEO_PARAM_INTEL_NUMBER_OF_TEMPORAL_LAYER
-    memset(&mNumberOfTemporalLayer, 0, sizeof(mNumberOfTemporalLayer));
-    SetTypeHeader(&mNumberOfTemporalLayer, sizeof(mNumberOfTemporalLayer));
-    mNumberOfTemporalLayer.nPortIndex = OUTPORT_INDEX;
-    mNumberOfTemporalLayer.nNumberOfTemporalLayer = 1;//default value is 1
+    memset(&mTemporalLayer, 0, sizeof(mTemporalLayer));
+    SetTypeHeader(&mTemporalLayer, sizeof(mTemporalLayer));
+    mTemporalLayer.nPortIndex = OUTPORT_INDEX;
+    mTemporalLayer.nNumberOfTemporalLayer = 1;//default value is 1
 
     mParamProfileLevel.eProfile = OMX_VIDEO_VP8ProfileMain;
     mParamProfileLevel.eLevel = OMX_VIDEO_VP8Level_Version3;
