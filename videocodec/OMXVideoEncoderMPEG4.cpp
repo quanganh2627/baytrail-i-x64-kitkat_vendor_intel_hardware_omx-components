@@ -92,8 +92,10 @@ OMX_ERRORTYPE OMXVideoEncoderMPEG4::ProcessorProcess(
     OMX_ERRORTYPE oret = OMX_ErrorNone;
 
 
-    LOGV_IF(buffers[INPORT_INDEX]->nFlags & OMX_BUFFERFLAG_EOS,
-            "%s(),%d: got OMX_BUFFERFLAG_EOS\n", __func__, __LINE__);
+    if(buffers[INPORT_INDEX]->nFlags & OMX_BUFFERFLAG_EOS) {
+        LOGV("%s(),%d: got OMX_BUFFERFLAG_EOS\n", __func__, __LINE__);
+        outflags |= OMX_BUFFERFLAG_EOS;
+    }
 
     if (!buffers[INPORT_INDEX]->nFilledLen) {
         LOGV("%s(),%d: input buffer's nFilledLen is zero\n",  __func__, __LINE__);
