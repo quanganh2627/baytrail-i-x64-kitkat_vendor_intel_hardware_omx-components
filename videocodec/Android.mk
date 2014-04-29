@@ -382,10 +382,7 @@ LOCAL_SRC_FILES += securevideo/baytrail/OMXVideoDecoderAVCSecure.cpp
 
 ifeq ($(REF_PRODUCT_NAME), byt_t_ffrd8)
 LOCAL_CFLAGS += -DUSE_PAVP_APP_ID
-else ifeq ($(REF_PRODUCT_NAME), byt_m_crb)
-LOCAL_CFLAGS += -DUSE_PAVP_APP_ID
 endif
-
 else ifeq ($(TARGET_BOARD_PLATFORM),cherrytrail)
 #Secure AVC decoder for Cherrytrail (uses PAVP)
 LOCAL_C_INCLUDES += $(TOP)/vendor/intel/hardware/PRIVATE/ufo/inc/libpavp
