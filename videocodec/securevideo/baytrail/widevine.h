@@ -336,9 +336,7 @@ typedef PAVP_CMD_NODATA wv_set_xcript_key_in;
 //for app-ID
 typedef struct {
     PAVP_CMD_HEADER  Header;
-#ifdef USE_PAVP_APP_ID
     uint32_t StreamId;
-#endif
 } wv_set_xcript_key_in;
 
 typedef struct {
