@@ -163,7 +163,7 @@ OMX_ERRORTYPE OMXVideoEncoderBase::InitOutputPort(void) {
     memset(&mConfigIntelBitrate, 0, sizeof(mConfigIntelBitrate));
     SetTypeHeader(&mConfigIntelBitrate, sizeof(mConfigIntelBitrate));
     mConfigIntelBitrate.nPortIndex = OUTPORT_INDEX;
-    mConfigIntelBitrate.nMaxEncodeBitrate = 4000 * 1024; // Maximum bitrate
+    mConfigIntelBitrate.nMaxEncodeBitrate = 0; // Maximum bitrate
     mConfigIntelBitrate.nTargetPercentage = 95; // Target bitrate as percentage of maximum bitrate; e.g. 95 is 95%
     mConfigIntelBitrate.nWindowSize = 0; // Window size in milliseconds allowed for bitrate to reach target
     mConfigIntelBitrate.nInitialQP = 0;  // Initial QP for I frames
