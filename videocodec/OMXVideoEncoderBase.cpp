@@ -927,7 +927,7 @@ OMX_ERRORTYPE OMXVideoEncoderBase::GetBlackFramePointer(OMX_PTR pStructure) {
         }
         memset(mBlackFramePointer, 0x0, lumaSize);
         memset(mBlackFramePointer + lumaSize, 0x80, lumaSize / 2);
-        p->nFramePointer = (OMX_U32)mBlackFramePointer;
+        p->nFramePointer = mBlackFramePointer;
     }
     return OMX_ErrorNone;
 }
