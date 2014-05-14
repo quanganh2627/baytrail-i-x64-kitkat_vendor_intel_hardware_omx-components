@@ -3,6 +3,8 @@ LOCAL_PATH := $(call my-dir)
 
 ifeq ($(strip $(USE_VIDEO_EFFECT)),true)
 LOCAL_C_FLAGS := -DUSE_VIDEO_EFFECT
+else
+LOCAL_C_FLAGS :=
 endif
 
 include $(CLEAR_VARS)
