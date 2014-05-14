@@ -53,16 +53,16 @@ private:
     void  MemFreeDataBuffer(OMX_U8 *pBuffer);
     static void KeepAliveTimerCallback(sigval v);
     void KeepAliveTimerCallback();
-    //bool EnableIEDSession(bool enable);
+
     OMX_ERRORTYPE PrepareClassicWVDecodeBuffer(OMX_BUFFERHEADERTYPE *buffer, buffer_retain_t *retain, VideoDecodeBuffer *p);
     OMX_ERRORTYPE PrepareModularWVDecodeBuffer(OMX_BUFFERHEADERTYPE *buffer, buffer_retain_t *retain, VideoDecodeBuffer *p);
+    OMX_ERRORTYPE PrepareMCastSinkWVDecodeBuffer(OMX_BUFFERHEADERTYPE *buffer, buffer_retain_t *retain, VideoDecodeBuffer *p);
 
 private:
     enum {
         // OMX_PARAM_PORTDEFINITIONTYPE
         INPORT_MIN_BUFFER_COUNT = 1,
         INPORT_ACTUAL_BUFFER_COUNT = 5,
-        INPORT_BUFFER_SIZE = 1572864,
 
         // for OMX_VIDEO_PARAM_INTEL_AVC_DECODE_SETTINGS
         // default number of reference frame
@@ -75,10 +75,8 @@ private:
     OMX_VIDEO_PARAM_AVCTYPE mParamAvc;
     uint32_t mDrmScheme;
 
-    struct IMRSlot {
-        uint32_t offset;
-        uint8_t *owner;  // pointer to OMX buffer that owns this slot
-    } mDataBufferSlot[INPORT_ACTUAL_BUFFER_COUNT];
+    // Keep track of number of allocated inport buffers
+    uint32_t mNumInportBuffers ;
 
     timer_t mKeepAliveTimer;
 
