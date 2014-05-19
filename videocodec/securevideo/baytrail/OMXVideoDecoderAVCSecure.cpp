@@ -260,10 +260,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::MdrmInjectKey(uint8_t in_session_id, uin
     input.Header.Status = 0;
     input.Header.BufferLength = sizeof(input)-sizeof(PAVP_CMD_HEADER);
     input.session_id = in_session_id;
-#ifdef USE_PAVP_APP_ID
-    LOGE("USE_PAVP_APP_ID true");
-//    input.StreamId = mPAVPAppID;
-#endif
+    input.StreamId = mPAVPAppID;
     memcpy(input.key_id, in_key_id, 16);
 
     return SecPassThrough((uint8_t*)&input, sizeof(input), (uint8_t*)&output, sizeof(output));
@@ -284,7 +281,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::WvSetTranscriptKey(void) {
     input.Header.Status = 0;
 #ifdef USE_PAVP_APP_ID
     LOGE("USE_PAVP_APP_ID true");
-//    input.StreamId = mPAVPAppID;
+    input.StreamId = mPAVPAppID;
 #endif
     input.Header.BufferLength = sizeof(input)-sizeof(PAVP_CMD_HEADER);
 
