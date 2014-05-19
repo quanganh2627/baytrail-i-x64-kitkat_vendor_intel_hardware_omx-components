@@ -279,10 +279,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::WvSetTranscriptKey(void) {
     input.Header.ApiVersion = WV_API_VERSION;
     input.Header.CommandId =  wv_set_xcript_key;
     input.Header.Status = 0;
-#ifdef USE_PAVP_APP_ID
-    LOGE("USE_PAVP_APP_ID true");
     input.StreamId = mPAVPAppID;
-#endif
     input.Header.BufferLength = sizeof(input)-sizeof(PAVP_CMD_HEADER);
 
     return SecPassThrough((uint8_t*)&input, sizeof(input), (uint8_t*)&output, sizeof(output));
