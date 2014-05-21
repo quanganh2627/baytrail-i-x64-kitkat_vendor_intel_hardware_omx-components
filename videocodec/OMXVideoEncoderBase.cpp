@@ -548,6 +548,8 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigIntelBitrate(OMX_PTR pStructure) {
     CHECK_SET_CONFIG_STATE();
 
     VideoConfigBitRate configBitRate;
+    mVideoEncoder->getConfig(&configBitRate);
+
     configBitRate.rcParams.bitRate = mConfigIntelBitrate.nMaxEncodeBitrate;
     configBitRate.rcParams.initQP = mConfigIntelBitrate.nInitialQP;
     configBitRate.rcParams.minQP = mConfigIntelBitrate.nMinQP;
@@ -559,9 +561,11 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigIntelBitrate(OMX_PTR pStructure) {
     configBitRate.rcParams.enableIntraFrameQPControl = 0;
     configBitRate.rcParams.temporalFrameRate = mConfigIntelBitrate.nFrameRate;
     configBitRate.rcParams.temporalID = mConfigIntelBitrate.nTemporalID;
+    configBitRate.rcParams.enableCARC = 1;
+    configBitRate.rcParams.enableCFSIFrames = 0;
     retStatus = mVideoEncoder->setConfig(&configBitRate);
     if(retStatus != ENCODE_SUCCESS) {
-        LOGW("failed to set IntelBitrate");
+        LOGW("failed to set VideoConfigBitRate");
     }
     return OMX_ErrorNone;
 }
@@ -593,6 +597,8 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigIntelAIR(OMX_PTR pStructure) {
 
     VideoConfigAIR configAIR;
     VideoConfigIntraRefreshType configIntraRefreshType;
+    mVideoEncoder->getConfig(&configAIR);
+    mVideoEncoder->getConfig(&configIntraRefreshType);
     if(mConfigIntelAir.bAirEnable == OMX_TRUE) {
         configAIR.airParams.airAuto = mConfigIntelAir.bAirAuto;
         configAIR.airParams.airMBs = mConfigIntelAir.nAirMBs;
@@ -640,12 +646,14 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetParamVideoIntraRefresh(OMX_PTR pStructure)
     CHECK_SET_PARAM_STATE();
 
     VideoConfigIntraRefreshType configIntraRefreshType;
+    mVideoEncoder->getConfig(&configIntraRefreshType);
+
     configIntraRefreshType.refreshType = (VideoIntraRefreshType)(mParamVideoRefresh.eRefreshMode + 1);
     if(configIntraRefreshType.refreshType == VIDEO_ENC_CIR){
-     VideoConfigCIR configCIR;
-        VideoConfigIntraRefreshType configIntraRefreshType;
+        VideoConfigCIR configCIR;
+        mVideoEncoder->getConfig(&configCIR);
+
         configCIR.cirParams.cir_num_mbs = mParamVideoRefresh.nCirMBs;
-        configIntraRefreshType.refreshType = VIDEO_ENC_CIR;
 
         retStatus = mVideoEncoder->setConfig(&configCIR);
         if(retStatus != ENCODE_SUCCESS) {
@@ -653,6 +661,7 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetParamVideoIntraRefresh(OMX_PTR pStructure)
         }
     }else{
         VideoConfigAIR configAIR;
+        mVideoEncoder->getConfig(&configAIR);
 
         configAIR.airParams.airMBs = mParamVideoRefresh.nAirMBs;
         configAIR.airParams.airThreshold = mParamVideoRefresh.nAirRef; 
@@ -701,8 +710,11 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigVideoFramerate(OMX_PTR pStructure) {
     CHECK_SET_CONFIG_STATE();
 
     VideoConfigFrameRate framerate;
+    mVideoEncoder->getConfig(&framerate);
+
     framerate.frameRate.frameRateDenom = 1;
     framerate.frameRate.frameRateNum = mConfigFramerate.xEncodeFramerate >> 16;
+
     retStatus = mVideoEncoder->setConfig(&framerate);
     if(retStatus != ENCODE_SUCCESS) {
         LOGW("Failed to set frame rate config");
@@ -728,7 +740,10 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigVideoIntraVOPRefresh(OMX_PTR pStruct
 
     if(p->IntraRefreshVOP == OMX_TRUE) {
         VideoParamConfigSet configIDRRequest;
+        mVideoEncoder->getConfig(&configIDRRequest);
+
         configIDRRequest.type = VideoConfigTypeIDRRequest;
+
         retStatus = mVideoEncoder->setConfig(&configIDRRequest);
         if(retStatus != ENCODE_SUCCESS) {
             LOGW("Failed to set refresh config");
@@ -801,6 +816,7 @@ OMX_ERRORTYPE OMXVideoEncoderBase::GetStoreMetaDataInBuffers(OMX_PTR pStructure)
 
     return OMX_ErrorNone;
 };
+
 OMX_ERRORTYPE OMXVideoEncoderBase::SetStoreMetaDataInBuffers(OMX_PTR pStructure) {
     OMX_ERRORTYPE ret;
     StoreMetaDataInBuffersParams *p = (StoreMetaDataInBuffersParams *)pStructure;
@@ -816,7 +832,10 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetStoreMetaDataInBuffers(OMX_PTR pStructure)
     if(mStoreMetaDataInBuffers == p->bStoreMetaData)
         return OMX_ErrorNone;
 
+    mVideoEncoder->getParameters(&StoreMetaDataInBuffers);
+
     StoreMetaDataInBuffers.isEnabled = p->bStoreMetaData;
+
     if (mVideoEncoder->setParameters(&StoreMetaDataInBuffers) != ENCODE_SUCCESS)
         return OMX_ErrorNotReady;
 
@@ -890,6 +909,8 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetTemporalLayer(OMX_PTR pStructure) {
     CHECK_PORT_INDEX(p, OUTPORT_INDEX);
 
     LOGE("SetTemporalLayer (enabled = %d)", p->nNumberOfTemporalLayer);
+
+    mVideoEncoder->getParameters(&TemporalLayer);
 
     TemporalLayer.numberOfLayer = p->nNumberOfTemporalLayer;
     TemporalLayer.nPeriodicity = p->nPeriodicity;
