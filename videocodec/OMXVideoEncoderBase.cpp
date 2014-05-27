@@ -144,7 +144,7 @@ OMX_ERRORTYPE OMXVideoEncoderBase::InitOutputPort(void) {
     memset(&mParamBitrate, 0, sizeof(mParamBitrate));
     SetTypeHeader(&mParamBitrate, sizeof(mParamBitrate));
     mParamBitrate.nPortIndex = OUTPORT_INDEX;
-    mParamBitrate.eControlRate = OMX_Video_ControlRateConstant;
+    mParamBitrate.eControlRate = OMX_Video_ControlRateVariable;
     mParamBitrate.nTargetBitrate = 192000; // to be overridden
 
     // OMX_VIDEO_CONFIG_PRI_INFOTYPE
@@ -154,22 +154,18 @@ OMX_ERRORTYPE OMXVideoEncoderBase::InitOutputPort(void) {
     mConfigPriInfo.nCapacity = 0;
     mConfigPriInfo.nHolder = NULL;
 
-    // OMX_VIDEO_PARAM_INTEL_BITRATETYPE
-    memset(&mParamIntelBitrate, 0, sizeof(mParamIntelBitrate));
-    SetTypeHeader(&mParamIntelBitrate, sizeof(mParamIntelBitrate));
-    mParamIntelBitrate.nPortIndex = OUTPORT_INDEX;
-    mParamIntelBitrate.eControlRate = OMX_Video_Intel_ControlRateMax;
-    mParamIntelBitrate.nTargetBitrate = 0; // to be overridden ?
-
     // OMX_VIDEO_CONFIG_INTEL_BITRATETYPE
     memset(&mConfigIntelBitrate, 0, sizeof(mConfigIntelBitrate));
     SetTypeHeader(&mConfigIntelBitrate, sizeof(mConfigIntelBitrate));
     mConfigIntelBitrate.nPortIndex = OUTPORT_INDEX;
-    mConfigIntelBitrate.nMaxEncodeBitrate = 4000 * 1024; // Maximum bitrate
+    mConfigIntelBitrate.nMaxEncodeBitrate = 0; // Maximum bitrate
     mConfigIntelBitrate.nTargetPercentage = 95; // Target bitrate as percentage of maximum bitrate; e.g. 95 is 95%
     mConfigIntelBitrate.nWindowSize = 0; // Window size in milliseconds allowed for bitrate to reach target
     mConfigIntelBitrate.nInitialQP = 0;  // Initial QP for I frames
     mConfigIntelBitrate.nMinQP = 0;
+    mConfigIntelBitrate.nMaxQP = 0;
+    mConfigIntelBitrate.nFrameRate = 0;
+    mConfigIntelBitrate.nTemporalID = 0;
 
     // OMX_VIDEO_CONFIG_INTEL_AIR
     memset(&mConfigIntelAir, 0, sizeof(mConfigIntelAir));
@@ -308,58 +304,31 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetVideoEncoderParam() {
     mEncoderParams->rcParams.targetPercentage = mConfigIntelBitrate.nTargetPercentage;
     mEncoderParams->rcParams.enableIntraFrameQPControl = 0;
 
-    if(mParamIntelBitrate.eControlRate == OMX_Video_Intel_ControlRateMax) {
-
-        mEncoderParams->rcParams.bitRate = mParamBitrate.nTargetBitrate;//bitrate->nTargetBitrate;
-        LOGV("rcParams.bitRate = %d\n", mEncoderParams->rcParams.bitRate);
-
-        if (mEncoderParams->rcMode == RATE_CONTROL_CBR) {
-            controlrate = OMX_Video_ControlRateConstant;
-        } else if (mEncoderParams->rcMode == RATE_CONTROL_VBR) {
-            controlrate = OMX_Video_ControlRateVariable;
-        } else {
-            controlrate = OMX_Video_ControlRateDisable;
-        }
-
-        if (controlrate != bitrate->eControlRate) {
-
-            if ((bitrate->eControlRate == OMX_Video_ControlRateVariable) ||
-                (bitrate->eControlRate == OMX_Video_ControlRateVariableSkipFrames)) {
-                mEncoderParams->rcMode = RATE_CONTROL_VBR;
-            } else if ((bitrate->eControlRate == OMX_Video_ControlRateConstant) ||
-                       (bitrate->eControlRate == OMX_Video_ControlRateConstantSkipFrames)) {
-                mEncoderParams->rcMode = RATE_CONTROL_CBR;
-            } else {
-                mEncoderParams->rcMode = RATE_CONTROL_NONE;
-            }
-            LOGV("rcMode = %d\n", mEncoderParams->rcMode);
-        }
-    } else {
-
-        if (mParamIntelBitrate.eControlRate == OMX_Video_Intel_ControlRateConstant ) {
-            LOGV("%s(), eControlRate == OMX_Video_Intel_ControlRateConstant", __func__);
-            mEncoderParams->rcParams.bitRate = mParamIntelBitrate.nTargetBitrate;
-            mEncoderParams->rcMode = RATE_CONTROL_CBR;
-        } else if (mParamIntelBitrate.eControlRate == OMX_Video_Intel_ControlRateVariable) {
-            LOGV("%s(), eControlRate == OMX_Video_Intel_ControlRateVariable", __func__);
-            mEncoderParams->rcParams.bitRate = mParamIntelBitrate.nTargetBitrate;
-            mEncoderParams->rcMode = RATE_CONTROL_VBR;
-        } else if (mParamIntelBitrate.eControlRate == OMX_Video_Intel_ControlRateVideoConferencingMode) {
-            LOGV("%s(), eControlRate == OMX_Video_Intel_ControlRateVideoConferencingMode ", __func__);
-            mEncoderParams->rcMode = RATE_CONTROL_VCM;
+    mEncoderParams->rcParams.bitRate = mParamBitrate.nTargetBitrate;
+    if ((mParamBitrate.eControlRate == OMX_Video_ControlRateConstant )|| 
+            (mParamBitrate.eControlRate == OMX_Video_ControlRateConstantSkipFrames)) {
+        LOGV("%s(), eControlRate == OMX_Video_Intel_ControlRateConstant", __func__);
+        mEncoderParams->rcMode = RATE_CONTROL_CBR;
+    } else if ((mParamBitrate.eControlRate == OMX_Video_ControlRateVariable) ||
+            (mParamBitrate.eControlRate == OMX_Video_ControlRateVariableSkipFrames)) {
+        LOGV("%s(), eControlRate == OMX_Video_Intel_ControlRateVariable", __func__);
+        mEncoderParams->rcMode = RATE_CONTROL_VBR;
+    } else if (mParamBitrate.eControlRate == OMX_Video_Intel_ControlRateVideoConferencingMode) {
+        LOGV("%s(), eControlRate == OMX_Video_Intel_ControlRateVideoConferencingMode ", __func__);
+        mEncoderParams->rcMode = RATE_CONTROL_VCM;
+        if(mConfigIntelBitrate.nMaxEncodeBitrate >0)
             mEncoderParams->rcParams.bitRate = mConfigIntelBitrate.nMaxEncodeBitrate;
-            if(mConfigIntelAir.bAirEnable == OMX_TRUE) {
-                mEncoderParams->airParams.airAuto = mConfigIntelAir.bAirAuto;
-                mEncoderParams->airParams.airMBs = mConfigIntelAir.nAirMBs;
-                mEncoderParams->airParams.airThreshold = mConfigIntelAir.nAirThreshold;
-                mEncoderParams->refreshType = VIDEO_ENC_AIR;
-            } else {
-                mEncoderParams->refreshType = VIDEO_ENC_NONIR;
-            }
-            LOGV("refreshType = %d\n", mEncoderParams->refreshType);
+        if(mConfigIntelAir.bAirEnable == OMX_TRUE) {
+            mEncoderParams->airParams.airAuto = mConfigIntelAir.bAirAuto;
+            mEncoderParams->airParams.airMBs = mConfigIntelAir.nAirMBs;
+            mEncoderParams->airParams.airThreshold = mConfigIntelAir.nAirThreshold;
+            mEncoderParams->refreshType = VIDEO_ENC_AIR;
         } else {
-           mEncoderParams->rcMode = RATE_CONTROL_NONE;
+            mEncoderParams->refreshType = VIDEO_ENC_NONIR;
         }
+        LOGV("refreshType = %d\n", mEncoderParams->refreshType);
+    } else {
+        mEncoderParams->rcMode = RATE_CONTROL_NONE;
     }
 
     ret = mVideoEncoder->setParameters(mEncoderParams);
@@ -419,7 +388,6 @@ OMX_ERRORTYPE OMXVideoEncoderBase::BuildHandlerList(void) {
     AddHandler(OMX_IndexParamVideoPortFormat, GetParamVideoPortFormat, SetParamVideoPortFormat);
     AddHandler(OMX_IndexParamVideoBitrate, GetParamVideoBitrate, SetParamVideoBitrate);
     AddHandler((OMX_INDEXTYPE)OMX_IndexIntelPrivateInfo, GetIntelPrivateInfo, SetIntelPrivateInfo);
-    AddHandler((OMX_INDEXTYPE)OMX_IndexParamIntelBitrate, GetParamIntelBitrate, SetParamIntelBitrate);
     AddHandler((OMX_INDEXTYPE)OMX_IndexConfigIntelBitrate, GetConfigIntelBitrate, SetConfigIntelBitrate);
     AddHandler((OMX_INDEXTYPE)OMX_IndexConfigIntelAIR, GetConfigIntelAIR, SetConfigIntelAIR);
     AddHandler((OMX_INDEXTYPE)OMX_IndexParamVideoIntraRefresh, GetParamVideoIntraRefresh, SetParamVideoIntraRefresh);
@@ -430,6 +398,7 @@ OMX_ERRORTYPE OMXVideoEncoderBase::BuildHandlerList(void) {
     AddHandler((OMX_INDEXTYPE)OMX_IndexStoreMetaDataInBuffers, GetStoreMetaDataInBuffers, SetStoreMetaDataInBuffers);
     AddHandler((OMX_INDEXTYPE)OMX_IndexExtSyncEncoding, GetSyncEncoding, SetSyncEncoding);
     AddHandler((OMX_INDEXTYPE)OMX_IndexExtPrependSPSPPS, GetPrependSPSPPS, SetPrependSPSPPS);
+    AddHandler((OMX_INDEXTYPE)OMX_IndexExtTemporalLayer, GetTemporalLayer,SetTemporalLayer);
     return OMX_ErrorNone;
 }
 
@@ -495,7 +464,6 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetParamVideoBitrate(OMX_PTR pStructure) {
     PortVideo *port = NULL;
     // This disables other type of bitrate control mechanism
     // TODO: check if it is desired
-    mParamIntelBitrate.eControlRate = OMX_Video_Intel_ControlRateMax;
 
     // TODO: can we override  mParamBitrate.nPortIndex (See SetPortBitrateParam)
     mParamBitrate.eControlRate = p->eControlRate;
@@ -545,27 +513,6 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetIntelPrivateInfo(OMX_PTR pStructure) {
     return OMX_ErrorNone;
 }
 
-OMX_ERRORTYPE OMXVideoEncoderBase::GetParamIntelBitrate(OMX_PTR pStructure) {
-    OMX_ERRORTYPE ret;
-    OMX_VIDEO_PARAM_INTEL_BITRATETYPE *p = (OMX_VIDEO_PARAM_INTEL_BITRATETYPE *)pStructure;
-
-    CHECK_TYPE_HEADER(p);
-    CHECK_PORT_INDEX(p, OUTPORT_INDEX);
-    memcpy(p, &mParamIntelBitrate, sizeof(*p));
-    return OMX_ErrorNone;
-}
-
-OMX_ERRORTYPE OMXVideoEncoderBase::SetParamIntelBitrate(OMX_PTR pStructure) {
-    OMX_ERRORTYPE ret;
-    OMX_VIDEO_PARAM_INTEL_BITRATETYPE *p = (OMX_VIDEO_PARAM_INTEL_BITRATETYPE *)pStructure;
-    CHECK_TYPE_HEADER(p);
-    CHECK_PORT_INDEX(p, OUTPORT_INDEX);
-    CHECK_SET_PARAM_STATE();
-
-    mParamIntelBitrate = *p;
-    return OMX_ErrorNone;
-}
-
 OMX_ERRORTYPE OMXVideoEncoderBase::GetConfigIntelBitrate(OMX_PTR pStructure) {
     OMX_ERRORTYPE ret;
     OMX_VIDEO_CONFIG_INTEL_BITRATETYPE *p = (OMX_VIDEO_CONFIG_INTEL_BITRATETYPE *)pStructure;
@@ -579,8 +526,7 @@ OMX_ERRORTYPE OMXVideoEncoderBase::GetConfigIntelBitrate(OMX_PTR pStructure) {
 OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigIntelBitrate(OMX_PTR pStructure) {
     OMX_ERRORTYPE ret;
     Encode_Status retStatus = ENCODE_SUCCESS;
-    if ((mParamIntelBitrate.eControlRate == OMX_Video_Intel_ControlRateMax)&&
-		(mEncoderParams->profile != VAProfileVP8Version0_3)) {
+    if (mParamBitrate.eControlRate == OMX_Video_ControlRateMax){
         LOGE("SetConfigIntelBitrate failed. Feature is disabled.");
         return OMX_ErrorUnsupportedIndex;
     }
@@ -595,21 +541,18 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigIntelBitrate(OMX_PTR pStructure) {
     // TODO: return OMX_ErrorIncorrectStateOperation?
     CHECK_SET_CONFIG_STATE();
 
-    if ((mParamIntelBitrate.eControlRate != OMX_Video_Intel_ControlRateVideoConferencingMode)&&
-		(mEncoderParams->profile != VAProfileVP8Version0_3)){
-        LOGE("SetConfigIntelBitrate failed. Feature is supported only in VCM for AVC/H264/MPEG4.");
-        return OMX_ErrorUnsupportedSetting;
-    }
     VideoConfigBitRate configBitRate;
     configBitRate.rcParams.bitRate = mConfigIntelBitrate.nMaxEncodeBitrate;
     configBitRate.rcParams.initQP = mConfigIntelBitrate.nInitialQP;
     configBitRate.rcParams.minQP = mConfigIntelBitrate.nMinQP;
-    configBitRate.rcParams.maxQP = 0;
+    configBitRate.rcParams.maxQP = mConfigIntelBitrate.nMaxQP;
     configBitRate.rcParams.I_minQP = 0;
     configBitRate.rcParams.I_maxQP = 0;
     configBitRate.rcParams.windowSize = mConfigIntelBitrate.nWindowSize;
     configBitRate.rcParams.targetPercentage = mConfigIntelBitrate.nTargetPercentage;
     configBitRate.rcParams.enableIntraFrameQPControl = 0;
+    configBitRate.rcParams.temporalFrameRate = mConfigIntelBitrate.nFrameRate;
+    configBitRate.rcParams.temporalID = mConfigIntelBitrate.nTemporalID;
     retStatus = mVideoEncoder->setConfig(&configBitRate);
     if(retStatus != ENCODE_SUCCESS) {
         LOGW("failed to set IntelBitrate");
@@ -736,8 +679,7 @@ OMX_ERRORTYPE OMXVideoEncoderBase::GetConfigVideoFramerate(OMX_PTR pStructure) {
 OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigVideoFramerate(OMX_PTR pStructure) {
     OMX_ERRORTYPE ret;
     Encode_Status retStatus = ENCODE_SUCCESS;
-    if ((mParamIntelBitrate.eControlRate == OMX_Video_Intel_ControlRateMax)&&
-		(mEncoderParams->profile != VAProfileVP8Version0_3)){
+    if (mParamBitrate.eControlRate == OMX_Video_ControlRateMax){
         LOGE("SetConfigVideoFramerate failed. Feature is disabled.");
         return OMX_ErrorUnsupportedIndex;
     }
@@ -752,11 +694,6 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigVideoFramerate(OMX_PTR pStructure) {
     // TODO, return OMX_ErrorIncorrectStateOperation?
     CHECK_SET_CONFIG_STATE();
 
-    if ((mParamIntelBitrate.eControlRate != OMX_Video_Intel_ControlRateVideoConferencingMode)&&
-		(mEncoderParams->profile != VAProfileVP8Version0_3)){
-        LOGE("SetConfigIntelAIR failed. Feature is supported only in VCM for AVC/H264/MPEG4.");
-        return OMX_ErrorUnsupportedSetting;
-    }
     VideoConfigFrameRate framerate;
     framerate.frameRate.frameRateDenom = 1;
     framerate.frameRate.frameRateNum = mConfigFramerate.xEncodeFramerate >> 16;
@@ -810,7 +747,7 @@ OMX_ERRORTYPE OMXVideoEncoderBase::GetParamIntelAdaptiveSliceControl(OMX_PTR pSt
 OMX_ERRORTYPE OMXVideoEncoderBase::SetParamIntelAdaptiveSliceControl(OMX_PTR pStructure) {
 
     OMX_ERRORTYPE ret;
-    if (mParamIntelBitrate.eControlRate == OMX_Video_Intel_ControlRateMax) {
+    if (mParamBitrate.eControlRate == OMX_Video_ControlRateMax) {
         LOGE("SetParamIntelAdaptiveSliceControl failed. Feature is disabled.");
         return OMX_ErrorUnsupportedIndex;
     }
@@ -926,3 +863,36 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetPrependSPSPPS(OMX_PTR pStructure) {
     LOGD("SetPrependSPSPPS success");
     return OMX_ErrorNone;
 };
+
+OMX_ERRORTYPE OMXVideoEncoderBase::GetTemporalLayer(OMX_PTR pStructure) {
+    OMX_ERRORTYPE ret;
+    OMX_VIDEO_PARAM_INTEL_TEMPORAL_LAYER* p = static_cast<OMX_VIDEO_PARAM_INTEL_TEMPORAL_LAYER*>(pStructure);
+
+    CHECK_TYPE_HEADER(p);
+    CHECK_PORT_INDEX(p, OUTPORT_INDEX);
+    memcpy(p, &mTemporalLayer, sizeof(*p));
+    return OMX_ErrorNone;
+}
+
+OMX_ERRORTYPE OMXVideoEncoderBase::SetTemporalLayer(OMX_PTR pStructure) {
+    OMX_ERRORTYPE ret;
+    OMX_VIDEO_PARAM_INTEL_TEMPORAL_LAYER *p = (OMX_VIDEO_PARAM_INTEL_TEMPORAL_LAYER *)pStructure;
+    VideoParamsTemporalLayer TemporalLayer;
+    OMX_U32 i;
+
+    CHECK_TYPE_HEADER(p);
+    CHECK_PORT_INDEX(p, OUTPORT_INDEX);
+
+    LOGE("SetTemporalLayer (enabled = %d)", p->nNumberOfTemporalLayer);
+
+    TemporalLayer.numberOfLayer = p->nNumberOfTemporalLayer;
+    TemporalLayer.nPeriodicity = p->nPeriodicity;
+    for(i=0;i<p->nPeriodicity;i++)
+        TemporalLayer.nLayerID[i] = p->nLayerID[i];
+
+    if (mVideoEncoder->setParameters(&TemporalLayer) != ENCODE_SUCCESS)
+        return OMX_ErrorNotReady;
+
+    LOGE("SetTemporalLayer success");
+    return OMX_ErrorNone;
+}
