@@ -419,7 +419,10 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ManagePAVPSession(bool force_recreate) {
         // PAVP heavy mode key (IED key) for the destroyed session.
         // Flush video decoder to remove them.
         mVideoDecoder->flush();
-
+        // Added Port flush otherwise OMX gets into race condition during
+        // quick HDMI hotplug and buffers are not released
+        this->ports[INPORT_INDEX]->FlushPort();
+        this->ports[OUTPORT_INDEX]->FlushPort();
         mpLibInstance = NULL;
         mDropUntilIDR = true;
     }
