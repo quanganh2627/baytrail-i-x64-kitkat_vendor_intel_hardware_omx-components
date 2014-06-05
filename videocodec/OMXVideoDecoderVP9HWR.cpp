@@ -722,5 +722,5 @@ bool OMXVideoDecoderVP9HWR::IsAllBufferAvailable(void) {
     return b;
 }
 
-DECLARE_OMX_COMPONENT("OMX.Intel.VideoDecoder.VP9.hwr", "video_decoder.vp9.hwr", OMXVideoDecoderVP9HWR);
+DECLARE_OMX_COMPONENT("OMX.Intel.VideoDecoder.VP9.hwr", "video_decoder.vp9", OMXVideoDecoderVP9HWR);
 
