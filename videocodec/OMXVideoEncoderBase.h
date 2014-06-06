@@ -59,7 +59,6 @@ protected:
     DECLARE_HANDLER(OMXVideoEncoderBase, ParamVideoPortFormat);
     DECLARE_HANDLER(OMXVideoEncoderBase, ParamVideoBitrate);
     DECLARE_HANDLER(OMXVideoEncoderBase, IntelPrivateInfo);
-    DECLARE_HANDLER(OMXVideoEncoderBase, ParamIntelBitrate);
     DECLARE_HANDLER(OMXVideoEncoderBase, ConfigIntelBitrate);
     DECLARE_HANDLER(OMXVideoEncoderBase, ConfigIntelAIR);
     DECLARE_HANDLER(OMXVideoEncoderBase, ParamVideoIntraRefresh);
@@ -70,19 +69,20 @@ protected:
     DECLARE_HANDLER(OMXVideoEncoderBase, StoreMetaDataInBuffers);
     DECLARE_HANDLER(OMXVideoEncoderBase, SyncEncoding);
     DECLARE_HANDLER(OMXVideoEncoderBase, PrependSPSPPS);
+    DECLARE_HANDLER(OMXVideoEncoderBase, TemporalLayer);
 
 protected:
     virtual OMX_ERRORTYPE SetVideoEncoderParam();
 protected:
     OMX_VIDEO_PARAM_BITRATETYPE mParamBitrate;
     OMX_VIDEO_CONFIG_PRI_INFOTYPE mConfigPriInfo;
-    OMX_VIDEO_PARAM_INTEL_BITRATETYPE mParamIntelBitrate;
     OMX_VIDEO_CONFIG_INTEL_BITRATETYPE mConfigIntelBitrate;
     OMX_VIDEO_CONFIG_INTEL_AIR mConfigIntelAir;
     OMX_VIDEO_PARAM_INTRAREFRESHTYPE mParamVideoRefresh;
     OMX_CONFIG_FRAMERATETYPE  mConfigFramerate;
     OMX_VIDEO_PARAM_INTEL_ADAPTIVE_SLICE_CONTROL mParamIntelAdaptiveSliceControl;
     OMX_VIDEO_PARAM_PROFILELEVELTYPE mParamProfileLevel;
+    OMX_VIDEO_PARAM_INTEL_TEMPORAL_LAYER mTemporalLayer;
 
     IVideoEncoder *mVideoEncoder;
     VideoParamsCommon *mEncoderParams;
