@@ -26,7 +26,6 @@
 #include <HardwareAPI.h>
 #include <hardware/hardware.h>
 #include <hardware/gralloc.h>
-#include <ufo/gralloc.h>
 
 
 static const char* VP9_MIME_TYPE = "video/x-vnd.on2.vp9";
@@ -256,23 +255,8 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorInit(void) {
         extNativeBufferSize = mGraphicBufferParam.graphicBufferStride *
                               mGraphicBufferParam.graphicBufferHeight * 1.5;
         extNativeBufferStride = mGraphicBufferParam.graphicBufferStride;
-/*
-        gralloc_module_t* pGralloc = NULL;
-        buffer_handle_t handle = (buffer_handle_t)buf_hdr->pBuffer;
-        intel_ufo_buffer_details_t info;
 
-        int err = hw_get_module(GRALLOC_HARDWARE_MODULE_ID, (hw_module_t const**)&pGralloc);
-        if (!pGralloc) { 
-            err = -1;
-        }
-        if (0 == err) {
-            err = pGralloc->perform(pGralloc, INTEL_UFO_GRALLOC_MODULE_PERFORM_GET_BO_INFO, handle, &info);
-        }
-        if (0 != err) {
-            return OMX_ErrorUndefined;
-        }
 
-*/
         VAStatus va_res; 
         unsigned int buffer;
         VASurfaceAttrib attribs[2];                   
