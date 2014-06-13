@@ -967,13 +967,9 @@ void OMXVideoDecoderAVCSecure::MemFreeDataBuffer(OMX_U8 *pBuffer, OMX_PTR pUserD
 
 OMX_U8* OMXVideoDecoderAVCSecure::MemAllocDataBuffer(OMX_U32 nSizeBytes)
 {
-    if (nSizeBytes > INPORT_BUFFER_SIZE || nSizeBytes == 0)
-    {
-        LOGE("Invalid size (%lu) of memory to allocate.", nSizeBytes);
-        return NULL;
-    }
-
-    LOGW_IF(nSizeBytes != INPORT_BUFFER_SIZE, "Size of memory to allocate is %lu", nSizeBytes);
+    LOGW_IF(nSizeBytes != INPORT_BUFFER_SIZE,
+        "%s: size of memory to allocate is %lu, but will allocate %u",
+        __FUNCTION__, nSizeBytes, sizeof(ProtectedDataBuffer));
 
     if (mNumInportBuffers >= INPORT_ACTUAL_BUFFER_COUNT)
     {
