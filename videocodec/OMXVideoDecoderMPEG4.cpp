@@ -18,6 +18,7 @@
 // #define LOG_NDEBUG 0
 #define LOG_TAG "OMXVideoDecoder"
 #include <utils/Log.h>
+#include <system/graphics.h>
 #include "OMXVideoDecoderMPEG4.h"
 
 // Be sure to have an equal string in VideoDecoderHost.cpp (libmix)
@@ -139,10 +140,14 @@ OMX_ERRORTYPE OMXVideoDecoderMPEG4::SetParamVideoMpeg4ProfileLevel(OMX_PTR pStru
 
 OMX_COLOR_FORMATTYPE OMXVideoDecoderMPEG4::GetOutputColorFormat(int width, int height)
 {
+#ifdef USE_SW_MPEG4
+    return (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YV12;
+#else
 #ifdef USE_GEN_HW
     return (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_NV12_X_TILED_INTEL;
 #else
     return OMXVideoDecoderBase::GetOutputColorFormat(width, height);
+#endif
 #endif
 }
 

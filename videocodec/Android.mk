@@ -245,6 +245,10 @@ ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
 LOCAL_CFLAGS += -DUSE_GEN_HW
 endif
 
+ifeq ($(USE_SW_MPEG4),true)
+LOCAL_CFLAGS += -DUSE_SW_MPEG4
+endif
+
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -299,6 +303,10 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
 LOCAL_CFLAGS += -DUSE_GEN_HW
+endif
+
+ifeq ($(USE_SW_MPEG4),true)
+LOCAL_CFLAGS += -DUSE_SW_MPEG4
 endif
 
 include $(BUILD_SHARED_LIBRARY)
