@@ -24,6 +24,7 @@
 #include <stdint.h>
 
 #include <OMX_VPP.h>
+#include <portvideo.h>
 #include "iVP_api.h"
 #include "VPPMds.h"
 
@@ -98,7 +99,7 @@ class VPPWorker {
         status_t configFilters(uint32_t* filters, const FilterParam* filterParam, const uint32_t flags);
 
         // Initialize: setupVA()->setupFilters()->setupPipelineCaps()
-        status_t init();
+        status_t init(PortVideo *port);
 
         // Send input and output buffers to VSP to begin processing
         status_t process(buffer_handle_t input, buffer_handle_t output, uint32_t outputCount, bool isEOS, uint32_t flags);
@@ -119,8 +120,8 @@ class VPPWorker {
         VPPWorker &operator=(const VPPWorker &);
 
     private:
-        // Graphic buffer
         static VPPWorker* mVPPWorker;
+        PortVideo *mPort;
 
         iVPCtxID mVPContext;
         bool mVPStarted;

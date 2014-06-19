@@ -199,7 +199,8 @@ OMX_ERRORTYPE OMXVideoPPBase::ProcessorInit(void) {
         return OMX_ErrorDynamicResourcesUnavailable;
     }
 
-    status_t status = mVPP->init();
+    PortVideo *port = static_cast<PortVideo *>(this->ports[OUTPORT_INDEX]);
+    status_t status = mVPP->init(port);
     if (status != STATUS_OK) {
         ALOGE("ProcessorInit: VPP initialize failed.");
         return OMX_ErrorUndefined;
@@ -325,15 +326,19 @@ OMX_ERRORTYPE OMXVideoPPBase::SetNativeBuffer(OMX_PTR pStructure) {
     if (ret != OMX_ErrorNone)
         return ret;
 
-    if (mOMXOutBufferHeaderTypePtrNum == 1) {
+    if (mOMXOutBufferHeaderTypePtrNum == 1 && param->nPortIndex == OUTPORT_INDEX) {
          mGraphicBufferParam.graphicBufferColorFormat = param->nativeBuffer->format;
          mGraphicBufferParam.graphicBufferStride = param->nativeBuffer->stride;
          mFilterParam.dstWidth = mGraphicBufferParam.graphicBufferWidth = param->nativeBuffer->width;
          mFilterParam.dstHeight = mGraphicBufferParam.graphicBufferHeight = param->nativeBuffer->height;
+         ALOGI("dest w = %d, h = %d", mFilterParam.dstWidth, mFilterParam.dstHeight);
     }
-    //FIX ME: Assume input and output buffer have the same width and height;
-    mFilterParam.srcWidth = mFilterParam.dstWidth;
-    mFilterParam.srcHeight = mFilterParam.dstHeight;
+
+    if (mOMXInBufferHeaderTypePtrNum == 1 && param->nPortIndex == INPORT_INDEX) {
+        mFilterParam.srcWidth = param->nativeBuffer->width;
+        mFilterParam.srcHeight = param->nativeBuffer->height;
+        ALOGI("src w = %d, h = %d", mFilterParam.srcWidth, mFilterParam.srcHeight);
+    }
 
     *(param->bufferHeader) = *buf_hdr;
 

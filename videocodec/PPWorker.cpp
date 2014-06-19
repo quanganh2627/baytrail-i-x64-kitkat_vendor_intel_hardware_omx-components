@@ -17,6 +17,7 @@
 #include <cutils/properties.h>
 #include <OMX_Core.h>
 #include <OMX_IVCommon.h>
+#include <OMX_VPP.h>
 #include <system/graphics.h>
 #include <system/window.h>
 
@@ -72,6 +73,7 @@ enum STRENGTH {
 
 VPPWorker::VPPWorker()
     :   mVPStarted(false),
+        mPort(NULL),
         mFilters(0),
         mPreDisplayMode(0),
         mDisplayMode(0),
@@ -96,7 +98,7 @@ VPPWorker* VPPWorker::getInstance() {
     return mVPPWorker;
 }
 
-status_t VPPWorker::init() {
+status_t VPPWorker::init(PortVideo *port) {
     if (!mVPStarted) {
         iVP_status status = iVP_create_context(&mVPContext, 1200, 800, 1);
         if (status == IVP_STATUS_SUCCESS)
@@ -104,6 +106,12 @@ status_t VPPWorker::init() {
         else
             return STATUS_ERROR;
     }
+
+    if (port == NULL) {
+        ALOGE("%s: invalid output port", __func__);
+        return STATUS_ERROR;
+    } else
+        mPort = port;
 
     char propValueString[PROPERTY_VALUE_MAX];
 
@@ -202,7 +210,7 @@ status_t VPPWorker::process(buffer_handle_t inputBuffer,
 
     if (isEOS) {
         ALOGI("%s: EOS flag is detected", __func__);
-        return STATUS_OK; 
+        return STATUS_OK;
     }
 
     if (outputCount < 1 || outputCount > DEINTERLACE_NUM) {
@@ -340,6 +348,7 @@ VPPWorker::~VPPWorker() {
 #endif
     memset(&mFilterParam, 0, sizeof(mFilterParam));
     mVPPWorker = NULL;
+    mPort = NULL;
 }
 
 status_t VPPWorker::reset() {
@@ -368,15 +377,29 @@ void VPPWorker::setDisplayMode(int mode) {
         return;
     }
 
-    //HDMI disconnected
+    //HDMI
     if ((mDisplayMode & MDS_HDMI_CONNECTED) == 0 &&
-            (mPreDisplayMode & MDS_HDMI_CONNECTED) != 0)
+            (mPreDisplayMode & MDS_HDMI_CONNECTED) != 0) {
         m3PReconfig = true;
+        if (mPort)
+            mPort->ReportEvent((OMX_EVENTTYPE)OMX_INTEL_EventIntelResumeVpp);
+    } else if ((mDisplayMode & MDS_HDMI_CONNECTED) != 0 &&
+            (mPreDisplayMode & MDS_HDMI_CONNECTED) == 0) {
+        if (mPort)
+            mPort->ReportEvent((OMX_EVENTTYPE)OMX_INTEL_EventIntelSkipVpp);
+    }
 
-    //WIDI disconnected
+    //WIDI
     if ((mDisplayMode & MDS_WIDI_ON) == 0 &&
-            (mPreDisplayMode & MDS_WIDI_ON) != 0)
+            (mPreDisplayMode & MDS_WIDI_ON) != 0) {
         m3PReconfig = true;
+        if (mPort)
+            mPort->ReportEvent((OMX_EVENTTYPE)OMX_INTEL_EventIntelResumeVpp);
+    } else if ((mDisplayMode & MDS_WIDI_ON) != 0 &&
+            (mPreDisplayMode & MDS_WIDI_ON) == 0) {
+        if(mPort)
+            mPort->ReportEvent((OMX_EVENTTYPE)OMX_INTEL_EventIntelSkipVpp);
+    }
 
     mPreDisplayMode = mDisplayMode;
     return;
