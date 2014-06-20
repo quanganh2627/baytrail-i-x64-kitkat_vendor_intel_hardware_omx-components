@@ -545,7 +545,7 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetConfigIntelBitrate(OMX_PTR pStructure) {
 
     // return OMX_ErrorNone if not in Executing state
     // TODO: return OMX_ErrorIncorrectStateOperation?
-    CHECK_SET_CONFIG_STATE();
+    // CHECK_SET_CONFIG_STATE();
 
     VideoConfigBitRate configBitRate;
     mVideoEncoder->getConfig(&configBitRate);
@@ -915,7 +915,16 @@ OMX_ERRORTYPE OMXVideoEncoderBase::SetTemporalLayer(OMX_PTR pStructure) {
     TemporalLayer.numberOfLayer = p->nNumberOfTemporalLayer;
     TemporalLayer.nPeriodicity = p->nPeriodicity;
     for(i=0;i<p->nPeriodicity;i++)
+    {
         TemporalLayer.nLayerID[i] = p->nLayerID[i];
+        TemporalLayer.nVP8RefFrame[i].refresh_alternate_frame = p->nVP8RefFrameType[i].nAlternateFrameRefresh;
+        TemporalLayer.nVP8RefFrame[i].refresh_golden_frame = p->nVP8RefFrameType[i].nGoldenFrameRefresh;
+        TemporalLayer.nVP8RefFrame[i].refresh_last = (OMX_U32)p->nVP8RefFrameType[i].bPreviousFrameRefresh;
+        TemporalLayer.nVP8RefFrame[i].no_ref_arf = !(OMX_U32)p->nVP8RefFrameType[i].bUseAlternateFrame;
+        TemporalLayer.nVP8RefFrame[i].no_ref_gf = !(OMX_U32)p->nVP8RefFrameType[i].bUseGoldenFrame;
+        TemporalLayer.nVP8RefFrame[i].no_ref_last = !(OMX_U32)p->nVP8RefFrameType[i].bUsePreviousFrame;
+        TemporalLayer.nVP8RefFrame[i].refresh_entropy_probs = (OMX_U32)p->nVP8RefFrameType[i].bUpdateEntropy;
+    }
 
     if (mVideoEncoder->setParameters(&TemporalLayer) != ENCODE_SUCCESS)
         return OMX_ErrorNotReady;
