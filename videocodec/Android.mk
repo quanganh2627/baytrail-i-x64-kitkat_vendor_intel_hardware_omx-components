@@ -355,8 +355,12 @@ LOCAL_CFLAGS += -DVED_TILING
 else ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
 #Secure AVC decoder for Merrifield (uses IED)
 LOCAL_SHARED_LIBRARIES += \
+    libcutils \
     libsepdrm_cc54 \
-    libdx_cc7
+    libdx_cc7 \
+    libsephdcp2x
+
+LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/libsephdcp2x
 
 LOCAL_SRC_FILES += securevideo/merrifield/OMXVideoDecoderAVCSecure.cpp
 
