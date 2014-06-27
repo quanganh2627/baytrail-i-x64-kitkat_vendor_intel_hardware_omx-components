@@ -626,6 +626,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
     int strideCropped = widthCropped;
     int sliceHeightCropped = heightCropped;
     int force_realloc = 0;
+    bool isVP8 = false;
 
 #ifdef TARGET_HAS_VPP
     LOGI("============== mVppBufferNum = %d\n", mVppBufferNum);
@@ -641,7 +642,11 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
             force_realloc = 1;
         }
     }
-
+    // work around for hangout.apk defeat
+    if (paramPortDefinitionInput.format.video.eCompressionFormat == OMX_VIDEO_CodingVP8) {
+        isVP8 = true;
+        force_realloc = 1;
+    }
     LOGV("Original size = %lu x %lu, new size = %d x %d, cropped size = %d x %d",
         paramPortDefinitionInput.format.video.nFrameWidth,
         paramPortDefinitionInput.format.video.nFrameHeight,
@@ -675,7 +680,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
             return OMX_ErrorNone;
         }
 
-        if (width > formatInfo->surfaceWidth ||  height > formatInfo->surfaceHeight) {
+        if (isVP8 || width > formatInfo->surfaceWidth ||  height > formatInfo->surfaceHeight) {
             // update the real decoded resolution to outport instead of display resolution for graphic buffer reallocation
             // when the width and height parsed from ES are larger than allocated graphic buffer in outport,
             paramPortDefinitionOutput.format.video.nFrameWidth = width;
