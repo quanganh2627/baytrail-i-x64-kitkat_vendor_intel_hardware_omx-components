@@ -98,10 +98,19 @@ OMXVideoDecoderVP9HWR::~OMXVideoDecoderVP9HWR() {
 
     unsigned int i = 0;
 
-#ifdef DECODE_WITH_GRALLOC_BUFFER
-    for (i=0; i<mOMXBufferHeaderTypePtrNum; i++) {
-        if (extMIDs[i]->m_surface != NULL) {
-            vaDestroySurfaces(mVADisplay, extMIDs[i]->m_surface, 1);
+    if (mWorkingMode == GRAPHICBUFFER_MODE) {
+        for (i = 0; i < mOMXBufferHeaderTypePtrNum; i++) {
+            if (extMIDs[i]->m_surface != NULL) {
+                vaDestroySurfaces(mVADisplay, extMIDs[i]->m_surface, 1);
+            }
+        }
+
+    } else if (mWorkingMode == RAWDATA_MODE) {
+        for (i = 0; i < OUTPORT_ACTUAL_BUFFER_COUNT; i++ ) {
+            if (extMIDs[i]->m_usrAddr != NULL) {
+                free(extMIDs[i]->m_usrAddr);
+                extMIDs[i]->m_usrAddr = NULL;
+            }
         }
     }
 
@@ -109,14 +118,7 @@ OMXVideoDecoderVP9HWR::~OMXVideoDecoderVP9HWR() {
         vaTerminate(mVADisplay);
         mVADisplay = NULL;
     }
-#else
-    for (i = 0; i < mOMXBufferHeaderTypePtrNum; i++ ) {
-        if (extMIDs[i]->m_usrAddr != NULL) {
-            free(extMIDs[i]->m_usrAddr);
-            extMIDs[i]->m_usrAddr = NULL;
-        }
-    }
-#endif
+
     for (i = 0; i < MAX_NATIVE_BUFFER_COUNT; i++) {
         delete extMIDs[i]->m_surface;
         free(extMIDs[i]);
@@ -238,6 +240,23 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::InitInputPortFormatSpecific(
 }
 
 OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorInit(void) {
+
+    if (RAWDATA_MODE == mWorkingMode) {
+        extNativeBufferSize = INTERNAL_MAX_FRAME_WIDTH *
+                              INTERNAL_MAX_FRAME_HEIGHT * 1.5;
+        extNativeBufferStride = INTERNAL_MAX_FRAME_WIDTH;
+
+        unsigned int i = 0;
+        for (i = 0; i < OUTPORT_ACTUAL_BUFFER_COUNT; i++ ) {
+            extMIDs[i]->m_usrAddr = (unsigned char*)malloc(sizeof(unsigned char) *
+                                    extNativeBufferSize);
+            extMIDs[i]->m_render_done = true;
+            extMIDs[i]->m_released = true;
+        }
+        extMappedNativeBufferCount = OUTPORT_ACTUAL_BUFFER_COUNT;
+        return OMX_ErrorNone;
+    }
+
 #ifdef DECODE_WITH_GRALLOC_BUFFER
     unsigned int i = 0;
 
@@ -246,7 +265,6 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorInit(void) {
               mOMXBufferHeaderTypePtrNum, MAX_NATIVE_BUFFER_COUNT);
         return OMX_ErrorOverflow;
     }
-
     for (i = 0; i < mOMXBufferHeaderTypePtrNum; i++) {
         OMX_BUFFERHEADERTYPE *buf_hdr = mOMXBufferHeaderTypePtrArray[i];
 
@@ -281,7 +299,6 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorInit(void) {
                                  mGraphicBufferParam.graphicBufferHeight;
         surfExtBuf->offsets[2] = 0;
         surfExtBuf->offsets[3] = 0;
-        //surfExtBuf->private_data = (void *)mConfigBuffer.nativeWindow;
         surfExtBuf->flags = VA_SURFACE_ATTRIB_MEM_TYPE_ANDROID_GRALLOC;
 
         surfExtBuf->buffers[0] = (unsigned int)buf_hdr->pBuffer;
@@ -329,28 +346,13 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorInit(void) {
         extMappedNativeBufferCount++;
     }
     return OMX_ErrorNone;
-#else
-    extNativeBufferSize = mGraphicBufferParam.graphicBufferStride *
-                          mGraphicBufferParam.graphicBufferHeight * 1.5;
-    extNativeBufferStride = mGraphicBufferParam.graphicBufferStride;
-
-    unsigned int i = 0;
-    for (i = 0; i < mOMXBufferHeaderTypePtrNum; i++ ) {
-        OMX_BUFFERHEADERTYPE *buf_hdr = mOMXBufferHeaderTypePtrArray[i];
-
-        extMIDs[i]->m_key = (unsigned int)(buf_hdr->pBuffer);
-        extMIDs[i]->m_usrAddr = (unsigned char*)malloc(sizeof(unsigned char) *
-                                extNativeBufferSize);
-        extMIDs[i]->m_render_done = true;
-        extMIDs[i]->m_released = true;
-    }
-    extMappedNativeBufferCount = mOMXBufferHeaderTypePtrNum;
-    return OMX_ErrorNone;
 #endif
 }
 
 OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorDeinit(void) {
-    return OMX_ErrorNone;
+    mOMXBufferHeaderTypePtrNum = 0;
+    memset(&mGraphicBufferParam, 0, sizeof(mGraphicBufferParam));
+    return OMXComponentCodecBase::ProcessorDeinit();
 }
 
 OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorStop(void) {
@@ -459,14 +461,81 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::FillRenderBuffer(OMX_BUFFERHEADERTYPE **pBu
 
     OMX_ERRORTYPE ret = OMX_ErrorNone;
 
-    if (mWorkingMode != GRAPHICBUFFER_MODE) {
-        LOGE("Working Mode is not GRAPHICBUFFER_MODE");
-        ret = OMX_ErrorBadParameter;
-    }
-
     vpx_codec_iter_t iter = NULL;
     vpx_image_t *img = NULL;
     img = vpx_codec_get_frame((vpx_codec_ctx_t *)mCtx, &iter);
+
+    if (mWorkingMode == RAWDATA_MODE) {
+        if (img == NULL) {
+            LOGE("vpx_codec_get_frame return NULL.");
+            return OMX_ErrorNotReady;
+        }
+
+        // in Raw data mode, this flag should be always true
+        extMIDs[img->fb_index]->m_render_done = true;
+
+        void *dst = buffer->pBuffer;
+        uint8_t *dst_y = (uint8_t *)dst;
+        const OMX_PARAM_PORTDEFINITIONTYPE *paramPortDefinitionInput
+                                      = this->ports[INPORT_INDEX]->GetPortDefinition();
+
+        size_t inBufferWidth = paramPortDefinitionInput->format.video.nFrameWidth;
+        size_t inBufferHeight = paramPortDefinitionInput->format.video.nFrameHeight;
+
+        const OMX_PARAM_PORTDEFINITIONTYPE *paramPortDefinitionOutput
+                                      = this->ports[OUTPORT_INDEX]->GetPortDefinition();
+
+        size_t dst_y_size = paramPortDefinitionOutput->format.video.nStride *
+                            paramPortDefinitionOutput->format.video.nFrameHeight;
+        size_t dst_c_stride = ALIGN(paramPortDefinitionOutput->format.video.nStride / 2, 16);
+        size_t dst_c_size = dst_c_stride * paramPortDefinitionOutput->format.video.nFrameHeight / 2;
+        uint8_t *dst_v = dst_y + dst_y_size;
+        uint8_t *dst_u = dst_v + dst_c_size;
+
+        //test border
+        dst_y += VPX_DECODE_BORDER * paramPortDefinitionOutput->format.video.nStride + VPX_DECODE_BORDER;
+        dst_v += (VPX_DECODE_BORDER/2) * dst_c_stride + (VPX_DECODE_BORDER/2);
+        dst_u += (VPX_DECODE_BORDER/2) * dst_c_stride + (VPX_DECODE_BORDER/2);
+
+        const uint8_t *srcLine = (const uint8_t *)img->planes[PLANE_Y];
+
+        for (size_t i = 0; i < img->d_h; ++i) {
+            memcpy(dst_y, srcLine, img->d_w);
+
+            srcLine += img->stride[PLANE_Y];
+            dst_y += paramPortDefinitionOutput->format.video.nStride;
+        }
+
+        srcLine = (const uint8_t *)img->planes[PLANE_U];
+        for (size_t i = 0; i < img->d_h / 2; ++i) {
+            memcpy(dst_u, srcLine, img->d_w / 2);
+
+            srcLine += img->stride[PLANE_U];
+            dst_u += dst_c_stride;
+        }
+
+        srcLine = (const uint8_t *)img->planes[PLANE_V];
+        for (size_t i = 0; i < img->d_h / 2; ++i) {
+            memcpy(dst_v, srcLine, img->d_w / 2);
+
+            srcLine += img->stride[PLANE_V];
+            dst_v += dst_c_stride;
+        }
+
+        buffer->nOffset = 0;
+        buffer->nFilledLen = dst_y_size + dst_c_size * 2;
+        if (inportBufferFlags & OMX_BUFFERFLAG_EOS) {
+            buffer->nFlags = OMX_BUFFERFLAG_EOS;
+        }
+
+        if (buffer_orign != buffer) {
+            *retain = BUFFER_RETAIN_OVERRIDDEN;
+        }
+        ret = OMX_ErrorNone;
+
+        return ret;
+
+    }
 
 #ifdef DECODE_WITH_GRALLOC_BUFFER
     if (NULL != img) {
@@ -482,12 +551,9 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::FillRenderBuffer(OMX_BUFFERHEADERTYPE **pBu
 
         buffer->nOffset = 0;
 
-        size_t dst_y_size = mGraphicBufferParam.graphicBufferStride *
-                            mGraphicBufferParam.graphicBufferHeight;
-        size_t dst_c_stride = ALIGN(mGraphicBufferParam.graphicBufferStride / 2, 16);
-        size_t dst_c_size = dst_c_stride * mGraphicBufferParam.graphicBufferHeight / 2;
+        size_t dst_y_size = img->d_w * img->d_h;
 
-        buffer->nFilledLen = dst_y_size + dst_c_size * 2;
+        buffer->nFilledLen = dst_y_size * 1.5; // suport only 4:2:0 for now
 
         if (inportBufferFlags & OMX_BUFFERFLAG_EOS) {
             buffer->nFlags = OMX_BUFFERFLAG_EOS;
@@ -502,93 +568,6 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::FillRenderBuffer(OMX_BUFFERHEADERTYPE **pBu
         LOGE("vpx_codec_get_frame return NULL.");
         return OMX_ErrorNotReady;
     }
-#else
-    if (img == NULL) {
-        LOGE("vpx_codec_get_frame return NULL.");
-        return OMX_ErrorNotReady;
-    }
-
-    buffer = *pBuffer = mOMXBufferHeaderTypePtrArray[img->fb_index];
-
-    if ((unsigned int)(buffer->pBuffer) != extMIDs[img->fb_index]->m_key) {
-        LOGE("There is gralloc handle mismatching between pool
-              and mOMXBufferHeaderTypePtrArray.");
-        return OMX_ErrorNotReady;
-    }
-
-    extMIDs[img->fb_index]->m_render_done = false;
-
-    android::GraphicBufferMapper &mapper = android::GraphicBufferMapper::get();
-    void *dst = NULL;
-
-    android::Rect bounds((int32_t)mGraphicBufferParam.graphicBufferWidth,
-                         (int32_t)mGraphicBufferParam.graphicBufferHeight);
-
-    if (mapper.lock((buffer_handle_t)buffer->pBuffer,
-                     GRALLOC_USAGE_SW_WRITE_OFTEN,
-                     bounds,
-                     &dst) != 0) {
-        LOGE("Error when mapping GraphicBuffer");
-        return OMX_ErrorNotReady;
-    }
-    uint8_t *dst_y = (uint8_t *)dst;
-    const OMX_PARAM_PORTDEFINITIONTYPE *paramPortDefinitionInput 
-                                  = this->ports[INPORT_INDEX]->GetPortDefinition();
-
-    size_t inBufferWidth = paramPortDefinitionInput->format.video.nFrameWidth;
-    size_t inBufferHeight = paramPortDefinitionInput->format.video.nFrameHeight;
-
-    size_t dst_y_size = mGraphicBufferParam.graphicBufferStride *
-                        mGraphicBufferParam.graphicBufferHeight;
-    size_t dst_c_stride = ALIGN(mGraphicBufferParam.graphicBufferStride / 2, 16);
-    size_t dst_c_size = dst_c_stride * mGraphicBufferParam.graphicBufferHeight / 2;
-    uint8_t *dst_v = dst_y + dst_y_size;
-    uint8_t *dst_u = dst_v + dst_c_size;
-
-    //test border
-    dst_y += VPX_DECODE_BORDER * mGraphicBufferParam.graphicBufferStride + VPX_DECODE_BORDER; 
-    dst_v += (VPX_DECODE_BORDER/2) * dst_c_stride + (VPX_DECODE_BORDER/2);
-    dst_u += (VPX_DECODE_BORDER/2) * dst_c_stride + (VPX_DECODE_BORDER/2);
-
-    const uint8_t *srcLine = (const uint8_t *)img->planes[PLANE_Y];
-
-    for (size_t i = 0; i < img->d_h; ++i) {
-        memcpy(dst_y, srcLine, img->d_w);
-
-        srcLine += img->stride[PLANE_Y];
-        dst_y += mGraphicBufferParam.graphicBufferStride;
-    }
-
-    srcLine = (const uint8_t *)img->planes[PLANE_U];
-    for (size_t i = 0; i < img->d_h / 2; ++i) {
-        memcpy(dst_u, srcLine, img->d_w / 2);
-
-        srcLine += img->stride[PLANE_U];
-        dst_u += dst_c_stride;
-    }
-
-    srcLine = (const uint8_t *)img->planes[PLANE_V];
-    for (size_t i = 0; i < img->d_h / 2; ++i) {
-        memcpy(dst_v, srcLine, img->d_w / 2);
-
-        srcLine += img->stride[PLANE_V];
-        dst_v += dst_c_stride;
-    }
-
-    buffer->nOffset = 0;
-    buffer->nFilledLen = dst_y_size + dst_c_size * 2;
-    if (inportBufferFlags & OMX_BUFFERFLAG_EOS) {
-        buffer->nFlags = OMX_BUFFERFLAG_EOS;
-    }
-
-    if (buffer_orign != buffer) {
-        *retain = BUFFER_RETAIN_OVERRIDDEN;
-    }
-    ret = OMX_ErrorNone;
-
-    mapper.unlock((buffer_handle_t)buffer->pBuffer);
-    return ret;
-
 #endif
 }
 
@@ -708,16 +687,27 @@ bool OMXVideoDecoderVP9HWR::IsAllBufferAvailable(void) {
 
     unsigned int i = 0;
     int found = 0;
-    for (i=0; i<mOMXBufferHeaderTypePtrNum; i++) {
-        if ((extMIDs[i]->m_render_done == true) && (extMIDs[i]->m_released == true)) {
-           found ++;
-           if (found > 1) { //libvpx sometimes needs 2 buffer when calling decode once.
-               return true;
-           }
+
+    if (RAWDATA_MODE == mWorkingMode) {
+        for (i = 0; i < OUTPORT_ACTUAL_BUFFER_COUNT; i++) {
+            if (extMIDs[i]->m_released == true) {
+               found ++;
+               if (found > 1) { //libvpx sometimes needs 2 buffer when calling decode once.
+                   return true;
+               }
+            }
+        }
+    } else { // graphic buffer mode
+        for (i = 0; i < mOMXBufferHeaderTypePtrNum; i++) {
+            if ((extMIDs[i]->m_render_done == true) && (extMIDs[i]->m_released == true)) {
+               found ++;
+               if (found > 1) { //libvpx sometimes needs 2 buffer when calling decode once.
+                   return true;
+               }
+            }
         }
     }
     b = false;
-
     return b;
 }
 

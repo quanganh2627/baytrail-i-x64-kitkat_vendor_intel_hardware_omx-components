@@ -97,6 +97,9 @@ private:
         INPORT_ACTUAL_BUFFER_COUNT = 5,
         INPORT_BUFFER_SIZE = 1382400,
         OUTPORT_NATIVE_BUFFER_COUNT = 12, // 8 reference + 1 current + 3 for asynchronized mode
+        OUTPORT_ACTUAL_BUFFER_COUNT = 12,  // for raw data mode
+        INTERNAL_MAX_FRAME_WIDTH = 1920,
+        INTERNAL_MAX_FRAME_HEIGHT = 1088,
     };
 
     void *mCtx;
