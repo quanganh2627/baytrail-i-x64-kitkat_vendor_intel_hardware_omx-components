@@ -679,7 +679,11 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
             // update the real decoded resolution to outport instead of display resolution for graphic buffer reallocation
             // when the width and height parsed from ES are larger than allocated graphic buffer in outport,
             paramPortDefinitionOutput.format.video.nFrameWidth = width;
+#ifndef USE_GEN_HW
             paramPortDefinitionOutput.format.video.nFrameHeight = (height + 0x1f) & ~0x1f;
+#else
+            paramPortDefinitionOutput.format.video.nFrameHeight = height;
+#endif
             paramPortDefinitionOutput.format.video.eColorFormat = GetOutputColorFormat(
                     paramPortDefinitionOutput.format.video.nFrameWidth,
                     paramPortDefinitionOutput.format.video.nFrameHeight);
@@ -868,7 +872,9 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBufferMode(OMX_PTR pStructure) {
     port_def.nBufferCountActual = mNativeBufferCount;
     port_def.format.video.cMIMEType = (OMX_STRING)VA_VED_RAW_MIME_TYPE;
     port_def.format.video.eColorFormat = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar;
+#ifndef USE_GEN_HW
     port_def.format.video.nFrameHeight = (port_def.format.video.nFrameHeight + 0x1f) & ~0x1f;
+#endif
     port_def.format.video.eColorFormat = GetOutputColorFormat(
                         port_def.format.video.nFrameWidth,
                         port_def.format.video.nFrameHeight);
