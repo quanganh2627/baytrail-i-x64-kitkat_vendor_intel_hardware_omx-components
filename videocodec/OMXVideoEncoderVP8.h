@@ -18,6 +18,7 @@ class OMXVideoEncoderVP8 : public OMXVideoEncoderBase {
         DECLARE_HANDLER(OMXVideoEncoderVP8, ParamVideoVp8);
         DECLARE_HANDLER(OMXVideoEncoderVP8, ConfigVideoVp8ReferenceFrame);
         DECLARE_HANDLER(OMXVideoEncoderVP8, ConfigVp8MaxFrameSizeRatio);
+        DECLARE_HANDLER(OMXVideoEncoderVP8, IntelVp8Parameter);
     private:
         enum {
             OUTPORT_MIN_BUFFER_COUNT = 1,

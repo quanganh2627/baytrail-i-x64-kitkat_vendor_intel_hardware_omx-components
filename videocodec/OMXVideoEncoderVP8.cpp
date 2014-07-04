@@ -47,6 +47,9 @@ OMX_ERRORTYPE OMXVideoEncoderVP8::InitOutputPortFormatSpecific(OMX_PARAM_PORTDEF
 
     mParamProfileLevel.eProfile = OMX_VIDEO_VP8ProfileMain;
     mParamProfileLevel.eLevel = OMX_VIDEO_VP8Level_Version3;
+
+    // set default rc mode as VCM due to vbr is not supported by FW
+    mParamBitrate.eControlRate = (OMX_VIDEO_CONTROLRATETYPE)OMX_Video_Intel_ControlRateVideoConferencingMode;
     return OMX_ErrorNone;
 }
 
@@ -98,10 +101,10 @@ OMX_ERRORTYPE OMXVideoEncoderVP8::ProcessorProcess(OMX_BUFFERHEADERTYPE **buffer
     inBuf.type = FTYPE_UNKNOWN;
     inBuf.timeStamp = buffers[INPORT_INDEX]->nTimeStamp;
 
-    outBuf.data =
-        buffers[OUTPORT_INDEX]->pBuffer + buffers[OUTPORT_INDEX]->nOffset;
+    outBuf.data = buffers[OUTPORT_INDEX]->pBuffer;
     outBuf.dataSize = 0;
-    outBuf.bufferSize = buffers[OUTPORT_INDEX]->nAllocLen - buffers[OUTPORT_INDEX]->nOffset;
+    outBuf.bufferSize = buffers[OUTPORT_INDEX]->nAllocLen;
+    outBuf.offset = 0;
 
     if (mFrameRetrieved) {
         // encode and setConfig need to be thread safe
@@ -132,11 +135,16 @@ OMX_ERRORTYPE OMXVideoEncoderVP8::ProcessorProcess(OMX_BUFFERHEADERTYPE **buffer
             goto out;
         }
 
-        LOGV("VP8 encode output data size = %d", outBuf.dataSize);
-
-
-        outfilledlen = outBuf.dataSize;
-        outtimestamp = buffers[INPORT_INDEX]->nTimeStamp;
+        if (ret == ENCODE_CODED_DATA_CORRUPTED){
+            LOGE("we got corrupted frame");
+            outflags |= OMX_BUFFERFLAG_DATACORRUPT;
+            mFrameRetrieved = OMX_TRUE;
+            retains[OUTPORT_INDEX] = BUFFER_RETAIN_NOT_RETAIN;
+            if (mSyncEncoding)
+                retains[INPORT_INDEX] = BUFFER_RETAIN_NOT_RETAIN;
+            else
+                retains[INPORT_INDEX] = BUFFER_RETAIN_NOT_RETAIN;
+        }
 
         if (outBuf.flag & ENCODE_BUFFERFLAG_SYNCFRAME) {
             outflags |= OMX_BUFFERFLAG_SYNCFRAME;
@@ -156,16 +164,15 @@ OMX_ERRORTYPE OMXVideoEncoderVP8::ProcessorProcess(OMX_BUFFERHEADERTYPE **buffer
 
         }
 
+        LOGE("VP8 encode output data size = %d", outBuf.dataSize);
+
+        outfilledlen = outBuf.dataSize;
+        outtimestamp = buffers[INPORT_INDEX]->nTimeStamp;
+        buffers[OUTPORT_INDEX]->nOffset = outBuf.offset;
+        buffers[OUTPORT_INDEX]->pPlatformPrivate = (OMX_PTR)outBuf.priv;
     }
 
-
-    if (outfilledlen > 0) {
-        retains[OUTPORT_INDEX] = BUFFER_RETAIN_NOT_RETAIN;
-    } else {
-        retains[OUTPORT_INDEX] = BUFFER_RETAIN_GETAGAIN;
-    }
-
-
+    retains[OUTPORT_INDEX] = BUFFER_RETAIN_NOT_RETAIN;
 
 #if SHOW_FPS
     {
@@ -213,7 +220,7 @@ OMX_ERRORTYPE OMXVideoEncoderVP8::BuildHandlerList(void) {
     AddHandler((OMX_INDEXTYPE)OMX_IndexParamVideoVp8, GetParamVideoVp8, SetParamVideoVp8);
     AddHandler((OMX_INDEXTYPE)OMX_IndexConfigVideoVp8ReferenceFrame, GetConfigVideoVp8ReferenceFrame, SetConfigVideoVp8ReferenceFrame);
     AddHandler((OMX_INDEXTYPE)OMX_IndexExtVP8MaxFrameSizeRatio, GetConfigVp8MaxFrameSizeRatio, SetConfigVp8MaxFrameSizeRatio);
-
+    AddHandler((OMX_INDEXTYPE)OMX_IndexExtVP8Parameters, GetIntelVp8Parameter, SetIntelVp8Parameter);
     return OMX_ErrorNone;
 }
 
@@ -293,6 +300,58 @@ OMX_ERRORTYPE OMXVideoEncoderVP8::SetConfigVp8MaxFrameSizeRatio(OMX_PTR pStructu
     retStatus = mVideoEncoder->setConfig(&configVP8MaxFrameSizeRatio);
     if(retStatus != ENCODE_SUCCESS) {
         LOGW("Failed to set vp8 max frame size ratio");
+    }
+
+    return OMX_ErrorNone;
+}
+
+OMX_ERRORTYPE OMXVideoEncoderVP8::GetIntelVp8Parameter(OMX_PTR pStructure) {
+    OMX_ERRORTYPE ret;
+    Encode_Status retStatus = ENCODE_SUCCESS;
+    OMX_VIDEO_INTEL_VP8_PARAM *p = (OMX_VIDEO_INTEL_VP8_PARAM*)pStructure;
+    CHECK_TYPE_HEADER(p);
+    CHECK_PORT_INDEX(p, OUTPORT_INDEX);
+
+    VideoParamsVP8 mVP8Parameters;
+
+    retStatus = mVideoEncoder->getParameters(&mVP8Parameters);
+    if(retStatus != ENCODE_SUCCESS) {
+        LOGW("Failed to get vp8 Intel Parameter");
+    }
+
+    p->nHrdbuf_fullness = mVP8Parameters.hrd_buf_size;
+    p->nHrdbuf_optimal = mVP8Parameters.hrd_buf_optimal_fullness;
+    p->nHrdbuf_initial = mVP8Parameters.hrd_buf_initial_fullness;
+    p->nMax_qp = mVP8Parameters.max_qp;
+    p->nMin_qp = mVP8Parameters.min_qp;
+    p->nMaxNumOfConsecutiveDropFrames = mVP8Parameters.max_num_of_consecutive_drop_frames;
+
+    return OMX_ErrorNone;
+}
+
+OMX_ERRORTYPE OMXVideoEncoderVP8::SetIntelVp8Parameter(OMX_PTR pStructure) {
+    OMX_ERRORTYPE ret;
+    Encode_Status retStatus = ENCODE_SUCCESS;
+    OMX_VIDEO_INTEL_VP8_PARAM *p = (OMX_VIDEO_INTEL_VP8_PARAM*)pStructure;
+    CHECK_TYPE_HEADER(p);
+    CHECK_PORT_INDEX(p, OUTPORT_INDEX);
+
+    VideoParamsVP8 mVP8Parameters;
+    retStatus = mVideoEncoder->getParameters(&mVP8Parameters);
+    if(retStatus != ENCODE_SUCCESS) {
+        LOGW("Failed to get vp8 Intel Parameter");
+    }
+
+    mVP8Parameters.hrd_buf_size = p->nHrdbuf_fullness;
+    mVP8Parameters.hrd_buf_optimal_fullness = p->nHrdbuf_optimal;
+    mVP8Parameters.hrd_buf_initial_fullness = p->nHrdbuf_initial;
+    mVP8Parameters.max_qp = p->nMax_qp;
+    mVP8Parameters.min_qp = p->nMin_qp;
+    mVP8Parameters.max_num_of_consecutive_drop_frames = p->nMaxNumOfConsecutiveDropFrames;
+
+    retStatus = mVideoEncoder->setParameters(&mVP8Parameters);
+    if(retStatus != ENCODE_SUCCESS) {
+        LOGW("Failed to set vp8 Intel Parameter");
     }
 
     return OMX_ErrorNone;
