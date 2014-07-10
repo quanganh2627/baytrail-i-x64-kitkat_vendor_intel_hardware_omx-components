@@ -682,17 +682,29 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
             __FUNCTION__, alignedDataSize - dataBuffer->size,
             dataBuffer->data + dataBuffer->size) ;
 
-        uint32_t result = hdcp2x_rx_decrypt_pes(
-            HDCP_CLEAR_CONTENT_IED_ENCRYPT_FLAG, 0, 0,
-            dataBuffer->data, alignedDataSize,
-            dataBuffer->data, alignedDataSize) ;
-        if (result != HDCP_SUCCESS)
-        {
-            LOGE("%s: error: hdcp2x_rx_decrypt_pes(HDCP_CLEAR_CONTENT_IED_ENCRYPT_FLAG"
-                "streamCounter = 0, inputCounter = 0, "
-                "data = %p, alignedDataSize = %u) returned %#x",
-                __FUNCTION__, dataBuffer->data, alignedDataSize, result) ;
-            return OMX_ErrorHardware ;
+        uint32_t result = 0;
+
+        // Condition to address the Format change where OMX retains the input buffer
+        // and after re-allocation tries to process the buffer again.
+        // Since it is inplace IED decryption we dont have original data.
+        // This flag is set in WiDi HDCP component while filing the buffer
+        if (dataBuffer->flags & PDB_FLAG_NEED_TRANSCRIPTION) {
+            result = hdcp2x_rx_decrypt_pes(
+                    HDCP_CLEAR_CONTENT_IED_ENCRYPT_FLAG, 0, 0,
+                    dataBuffer->data, alignedDataSize,
+                    dataBuffer->data, alignedDataSize) ;
+            if (result != HDCP_SUCCESS)
+            {
+                LOGE("%s: error: hdcp2x_rx_decrypt_pes(HDCP_CLEAR_CONTENT_IED_ENCRYPT_FLAG"
+                        "streamCounter = 0, inputCounter = 0, "
+                        "data = %p, alignedDataSize = %u) returned %#x",
+                        __FUNCTION__, dataBuffer->data, alignedDataSize, result) ;
+                return OMX_ErrorHardware ;
+            }
+            // Update the flags to indicate IED transcription is done
+            dataBuffer->flags &= ~PDB_FLAG_NEED_TRANSCRIPTION;
+        } else {
+            LOGI("Skipping IED encryption as frame is already IED transcripted...\n");
         }
 
         DumpBuffer2("OMX: IED encrypted data, up to 64 bytes: ", dataBuffer->data, dumpLength) ;
@@ -813,29 +825,39 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
                 __FUNCTION__, alignedDataSize - encryptedDataSize,
                 encryptedData + encryptedDataSize) ;
 
-            uint32_t result = hdcp2x_rx_decrypt(
-                dataBuffer->pesBuffers[0].streamCounter,
-                dataBuffer->pesBuffers[0].inputCounter,
+            // Condition to address the Format change where OMX retains the input buffer
+            // and after re-allocation tries to process the buffer again.
+            // Since it is inplace IED decryption we dont have original data.
+            // This flag is set in WiDi HDCP component while filing the buffer
+            if (dataBuffer->flags & PDB_FLAG_NEED_TRANSCRIPTION) {
+                uint32_t result = hdcp2x_rx_decrypt(
+                        dataBuffer->pesBuffers[0].streamCounter,
+                        dataBuffer->pesBuffers[0].inputCounter,
 
-                // Input data, encrypted with HDCP
-                encryptedData, encryptedDataSize,
+                        // Input data, encrypted with HDCP
+                        encryptedData, encryptedDataSize,
 
-                // Output data, encrypted with IED (in-place decryption)
-                encryptedData, alignedDataSize,
+                        // Output data, encrypted with IED (in-place decryption)
+                        encryptedData, alignedDataSize,
 
-                headerData, &headerDataSize) ;
-            if (result != HDCP_SUCCESS)
-            {
-                LOGE("%s: error: hdcp2x_rc_decrypt(streamCounter = %u, inputCounter = %llu, "
-                    "encryptedData = %p, encryptedDataSize = %u, alignedDataSize = %u, "
-                    "headerData = %p) returned %x",
-                    __FUNCTION__, dataBuffer->pesBuffers[0].streamCounter,
-                    dataBuffer->pesBuffers[0].inputCounter,
-                    encryptedData, encryptedDataSize, alignedDataSize,
-                    headerData, result) ;
-                return OMX_ErrorHardware ;
+                        headerData, &headerDataSize) ;
+                if (result != HDCP_SUCCESS)
+                {
+                    LOGE("%s: error: hdcp2x_rc_decrypt(streamCounter = %u, inputCounter = %llu, "
+                            "encryptedData = %p, encryptedDataSize = %u, alignedDataSize = %u, "
+                            "headerData = %p) returned %x",
+                            __FUNCTION__, dataBuffer->pesBuffers[0].streamCounter,
+                            dataBuffer->pesBuffers[0].inputCounter,
+                            encryptedData, encryptedDataSize, alignedDataSize,
+                            headerData, result) ;
+                    return OMX_ErrorHardware ;
+                }
+
+                // Update the flags to indicate IED transcription is done
+                dataBuffer->flags &= ~PDB_FLAG_NEED_TRANSCRIPTION;
+            } else {
+                LOGI("Skipping HDCP Decryption as frame is already IED transcripted...\n");
             }
-
             DumpBuffer2("OMX: IED encrypted data, up to 64 bytes: ", encryptedData, dumpLength) ;
             DumpBuffer2("OMX: SPS/PPS header data: ", headerData, headerDataSize) ;
             LOGV("header data size = %u", headerDataSize) ;
