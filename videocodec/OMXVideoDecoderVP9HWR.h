@@ -51,7 +51,14 @@ vaapiMemId* extMIDs[MAX_NATIVE_BUFFER_COUNT];
 int extUtilBufferCount;
 int extMappedNativeBufferCount;
 unsigned int extNativeBufferSize;
-int extNativeBufferStride;
+
+// These two strides are passed into libvpx to indicate the external buffer size
+// in case that video demension is smaller than these, libvpx inside should
+// ajust the start point of address of decoded y/v/u component.
+// This is especially for adaptive playback case. External buffer is always allocated
+// (or mapped from vaSurface) to a pre-set max size.
+int extActualBufferStride;
+int extActualBufferHeightStride;
 
 class OMXVideoDecoderVP9HWR : public OMXVideoDecoderBase {
 public:
@@ -68,6 +75,7 @@ protected:
             OMX_BUFFERHEADERTYPE ***pBuffers,
             buffer_retain_t *retains,
             OMX_U32 numberBuffers);
+    virtual OMX_ERRORTYPE ProcessorReset(void);
 
     virtual OMX_ERRORTYPE ProcessorPreFillBuffer(OMX_BUFFERHEADERTYPE* buffer);
     virtual bool IsAllBufferAvailable(void);
@@ -77,7 +85,12 @@ protected:
 
     virtual OMX_ERRORTYPE BuildHandlerList(void);
 
-    virtual OMX_ERRORTYPE FillRenderBuffer(OMX_BUFFERHEADERTYPE **pBuffer,  buffer_retain_t *retain, OMX_U32 inportBufferFlags);
+    virtual OMX_ERRORTYPE FillRenderBuffer(OMX_BUFFERHEADERTYPE **pBuffer,
+                                           buffer_retain_t *retain,
+                                           OMX_U32 inportBufferFlags,
+                                           OMX_BOOL *isResolutionChange);
+
+    virtual OMX_ERRORTYPE HandleFormatChange(void);
 
     virtual OMX_COLOR_FORMATTYPE GetOutputColorFormat(int width, int height);
     virtual OMX_ERRORTYPE GetDecoderOutputCropSpecific(OMX_PTR pStructure);
@@ -90,6 +103,7 @@ protected:
 
 private:
     OMX_ERRORTYPE initDecoder();
+    OMX_ERRORTYPE destroyDecoder();
 
     enum {
         // OMX_PARAM_PORTDEFINITIONTYPE
@@ -107,6 +121,12 @@ private:
     //OMX_VIDEO_PARAM_VP9TYPE mParamVp9;
     vpx_codec_frame_buffer_t* mFrameBuffers;
     int mNumFrameBuffer;
+
+    // These members are for Adaptive playback
+    int mDecodedImageWidth;
+    int mDecodedImageHeight;
+    int mDecodedImageNewWidth;
+    int mDecodedImageNewHeight;
 
     Display* mDisplay;
     VADisplay mVADisplay;

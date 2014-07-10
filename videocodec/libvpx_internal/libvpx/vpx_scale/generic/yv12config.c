@@ -142,7 +142,8 @@ int vp9_realloc_frame_buffer(YV12_BUFFER_CONFIG *ybf,
                              void *cb_priv) {
   if (ybf) {
     const int aligned_width = (width + 7) & ~7;
-    int aligned_height = (height + 7) & ~7;
+    //int aligned_height = (height + 7) & ~7;
+    int aligned_height = (height + 31) & ~31;
     int y_stride = ((aligned_width + 2 * border) + 31) & ~31;
     int yplane_size = (aligned_height + 2 * border) * y_stride;
 
@@ -188,12 +189,15 @@ int vp9_realloc_frame_buffer(YV12_BUFFER_CONFIG *ybf,
       // extra info from external buffer
       ybf->fb_index = fb->fb_index;
       if (fb->fb_stride > 0) {
-        if (fb->fb_stride >= y_stride) {
+        if ((fb->fb_stride >= y_stride) && (fb->fb_height_stride >= aligned_height)) {
             // re-calculate stride/size stuff
             y_stride = fb->fb_stride;
             // external height is 32-bit align, align here either
             aligned_height = (aligned_height + 31) & ~31;
+            aligned_height = fb->fb_height_stride;
+
             yplane_size = (aligned_height + 2 * border) * y_stride;
+
             uv_stride = y_stride >> ss_x;
             uv_height = aligned_height >> ss_y;
             uvplane_size = (uv_height + 2 * uv_border_h) * uv_stride;
@@ -225,7 +229,7 @@ int vp9_realloc_frame_buffer(YV12_BUFFER_CONFIG *ybf,
       // This memset is needed for fixing valgrind error from C loop filter
       // due to access uninitialized memory in frame border. It could be
       // removed if border is totally removed.
-      vpx_memset(ybf->buffer_alloc, 0, ybf->buffer_alloc_sz);
+      //vpx_memset(ybf->buffer_alloc, 0, ybf->buffer_alloc_sz);
     }
 
     /* Only support allocating buffers that have a border that's a multiple

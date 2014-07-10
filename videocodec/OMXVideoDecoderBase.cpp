@@ -959,6 +959,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::GetDecoderOutputCropSpecific(OMX_PTR pStructu
         rectParams->nTop = formatInfo->cropTop;
         rectParams->nWidth = formatInfo->width - formatInfo->cropLeft - formatInfo->cropRight;
         rectParams->nHeight = formatInfo->height - formatInfo->cropTop - formatInfo->cropBottom;
+
         return OMX_ErrorNone;
     } else {
         return OMX_ErrorFormatNotDetected;

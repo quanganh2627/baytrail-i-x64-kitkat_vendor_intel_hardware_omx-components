@@ -40,6 +40,7 @@ typedef struct vpx_codec_frame_buffer {
 
   int fb_index;
   int fb_stride;
+  int fb_height_stride;
 } vpx_codec_frame_buffer_t;
 
 /*!\brief get frame buffer callback prototype
