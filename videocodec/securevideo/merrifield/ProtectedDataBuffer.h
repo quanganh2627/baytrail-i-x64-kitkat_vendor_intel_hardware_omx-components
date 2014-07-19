@@ -58,6 +58,10 @@ extern "C" {
 #define DRM_SCHEME_WV_MODULAR   2
 #define DRM_SCHEME_MCAST_SINK   3
 
+// Flags to indicate if we need IED Transcription (needed for inplace encryption)
+// Currently Widi Sink uses it to handle OMX Port reconfig scenario
+#define PDB_FLAG_NEED_TRANSCRIPTION   0x10000000
+
 #pragma pack(push, 4)
 
 typedef struct ProtectedPESBuffer_tag {
