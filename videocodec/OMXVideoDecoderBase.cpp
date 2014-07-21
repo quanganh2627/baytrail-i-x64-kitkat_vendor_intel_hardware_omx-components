@@ -646,6 +646,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
     int strideCropped = widthCropped;
     int sliceHeightCropped = heightCropped;
     int force_realloc = 0;
+    bool isVP8 = false;
 
 #ifdef TARGET_HAS_VPP
     LOGI("============== mVppBufferNum = %d\n", mVppBufferNum);
@@ -660,6 +661,11 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
             paramPortDefinitionOutput.nBufferCountActual = mNativeBufferCount = formatInfo->actualBufferNeeded;
             force_realloc = 1;
         }
+    }
+
+    if (paramPortDefinitionInput.format.video.eCompressionFormat == OMX_VIDEO_CodingVP8) {
+        isVP8 = true;
+        force_realloc = 1;
     }
 
     if (!force_realloc &&
@@ -690,11 +696,11 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
             return OMX_ErrorNone;
         }
 
-        if (width > formatInfo->surfaceWidth ||  height > formatInfo->surfaceHeight) {
+        if (isVP8 || width > formatInfo->surfaceWidth ||  height > formatInfo->surfaceHeight) {
             // update the real decoded resolution to outport instead of display resolution for graphic buffer reallocation
             // when the width and height parsed from ES are larger than allocated graphic buffer in outport,
             paramPortDefinitionOutput.format.video.nFrameWidth = width;
-            paramPortDefinitionOutput.format.video.nFrameHeight = (height + 0x1f) & ~0x1f;
+            paramPortDefinitionOutput.format.video.nFrameHeight = height;
             paramPortDefinitionOutput.format.video.eColorFormat = GetOutputColorFormat(
                     paramPortDefinitionOutput.format.video.nFrameWidth,
                     paramPortDefinitionOutput.format.video.nFrameHeight);
@@ -713,6 +719,9 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
     if (mWorkingMode == GRAPHICBUFFER_MODE) {
         // Make sure va_destroySurface is called before graphicbuffer is freed in case of port setting changed
         mVideoDecoder->freeSurfaceBuffers();
+
+        // Also make sure all the reference frames are flushed
+        ProcessorFlush(INPORT_INDEX);
     }
     this->ports[OUTPORT_INDEX]->ReportPortSettingsChanged();
     return OMX_ErrorNone;
@@ -903,7 +912,6 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBufferModeSpecific(OMX_PTR pStructur
     }
     port_def.format.video.cMIMEType = (OMX_STRING)VA_VED_RAW_MIME_TYPE;
     port_def.format.video.eColorFormat = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar;
-    port_def.format.video.nFrameHeight = (port_def.format.video.nFrameHeight + 0x1f) & ~0x1f;
     port_def.format.video.eColorFormat = GetOutputColorFormat(
                         port_def.format.video.nFrameWidth,
                         port_def.format.video.nFrameHeight);
