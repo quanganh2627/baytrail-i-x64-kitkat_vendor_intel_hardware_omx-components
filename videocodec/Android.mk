@@ -176,6 +176,7 @@ LOCAL_SRC_FILES := \
     OMXVideoDecoderBase.cpp\
     OMXVideoDecoderVP9HWR.cpp
 
+LOCAL_LDFLAGS := -Wl,--no-warn-shared-textrel
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderVP9HWR
 
@@ -673,6 +674,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoEncoderVP8
 include $(BUILD_SHARED_LIBRARY)
 
+ifeq ($(TARGET_HAS_MULTIPLE_DISPLAY),true)
 # VPP
 include $(CLEAR_VARS)
 ifeq ($(TARGET_HAS_VPP),true)
@@ -719,5 +721,6 @@ LOCAL_CFLAGS += $(LOCAL_C_FLAGS)
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoPP
 include $(BUILD_SHARED_LIBRARY)
+endif
 
 endif
