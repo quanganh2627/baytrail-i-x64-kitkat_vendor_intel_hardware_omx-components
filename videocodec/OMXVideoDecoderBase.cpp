@@ -462,6 +462,9 @@ OMX_ERRORTYPE OMXVideoDecoderBase::PrepareConfigBuffer(VideoConfigBuffer *p) {
         if (mEnableAdaptivePlayback)
             p->flag |= WANT_ADAPTIVE_PLAYBACK;
 
+        if (mForceBufferRealloc)
+            p->flag |= WANT_BUFFER_FLUSH;
+
         PortVideo *port = NULL;
         port = static_cast<PortVideo *>(this->ports[INPORT_INDEX]);
         OMX_PARAM_PORTDEFINITIONTYPE port_def;
@@ -626,7 +629,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
     int strideCropped = widthCropped;
     int sliceHeightCropped = heightCropped;
     int force_realloc = 0;
-    bool isVP8 = false;
+    bool isVP8 = (paramPortDefinitionInput.format.video.eCompressionFormat == OMX_VIDEO_CodingVP8) ? true : false;
 
 #ifdef TARGET_HAS_VPP
     LOGI("============== mVppBufferNum = %d\n", mVppBufferNum);
@@ -642,11 +645,12 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
             force_realloc = 1;
         }
     }
+
     // work around for hangout.apk defeat
-    if (paramPortDefinitionInput.format.video.eCompressionFormat == OMX_VIDEO_CodingVP8) {
-        isVP8 = true;
+    if (isVP8 && mForceBufferRealloc) {
         force_realloc = 1;
     }
+
     LOGV("Original size = %lu x %lu, new size = %d x %d, cropped size = %d x %d",
         paramPortDefinitionInput.format.video.nFrameWidth,
         paramPortDefinitionInput.format.video.nFrameHeight,
@@ -680,15 +684,15 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
             return OMX_ErrorNone;
         }
 
-        if (isVP8 || width > formatInfo->surfaceWidth ||  height > formatInfo->surfaceHeight) {
+        if ((isVP8 && mForceBufferRealloc) || width > formatInfo->surfaceWidth ||  height > formatInfo->surfaceHeight) {
             // update the real decoded resolution to outport instead of display resolution for graphic buffer reallocation
             // when the width and height parsed from ES are larger than allocated graphic buffer in outport,
             paramPortDefinitionOutput.format.video.nFrameWidth = width;
-#ifndef USE_GEN_HW
-            paramPortDefinitionOutput.format.video.nFrameHeight = (height + 0x1f) & ~0x1f;
-#else
-            paramPortDefinitionOutput.format.video.nFrameHeight = height;
-#endif
+            if (isVP8 && mForceBufferRealloc) {
+                paramPortDefinitionOutput.format.video.nFrameHeight = height;
+            } else {
+                paramPortDefinitionOutput.format.video.nFrameHeight = (height + 0x1f) & ~0x1f;
+            }
             paramPortDefinitionOutput.format.video.eColorFormat = GetOutputColorFormat(
                     paramPortDefinitionOutput.format.video.nFrameWidth,
                     paramPortDefinitionOutput.format.video.nFrameHeight);
@@ -877,9 +881,11 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBufferMode(OMX_PTR pStructure) {
     port_def.nBufferCountActual = mNativeBufferCount;
     port_def.format.video.cMIMEType = (OMX_STRING)VA_VED_RAW_MIME_TYPE;
     port_def.format.video.eColorFormat = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar;
-#ifndef USE_GEN_HW
-    port_def.format.video.nFrameHeight = (port_def.format.video.nFrameHeight + 0x1f) & ~0x1f;
-#endif
+    if (port_def.format.video.eCompressionFormat == OMX_VIDEO_CodingVP8 && mForceBufferRealloc) {
+        port_def.format.video.nFrameHeight = port_def.format.video.nFrameHeight;
+    } else {
+        port_def.format.video.nFrameHeight = (port_def.format.video.nFrameHeight + 0x1f) & ~0x1f;
+    }
     port_def.format.video.eColorFormat = GetOutputColorFormat(
                         port_def.format.video.nFrameWidth,
                         port_def.format.video.nFrameHeight);
