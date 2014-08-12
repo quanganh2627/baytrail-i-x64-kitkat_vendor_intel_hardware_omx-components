@@ -27,8 +27,24 @@
 #include <hardware/hardware.h>
 #include <hardware/gralloc.h>
 
+#include <emmintrin.h>
 
 static const char* VP9_MIME_TYPE = "video/x-vnd.on2.vp9";
+
+static inline void vp9CLflush(volatile void *addr, size_t size)
+{
+   if (((unsigned long)addr & 0x3F) == 0) {
+       size_t count = size / 64;
+       _mm_mfence();
+       for( size_t i = 0; i < count; i++) {
+           __asm__ __volatile__("clflush (%0)\n" : : "r"(addr) : "memory");
+           addr += 64;
+       }
+       _mm_mfence();
+   } else {
+       ALOGW("the addr is not 64bit align addr=0x%x",addr);
+   }
+}
 
 static int GetCPUCoreCount()
 {
@@ -337,6 +353,11 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorInit(void)
                 vaUnmapBuffer(mVADisplay, image.buf);
             }
             vaDestroyImage(mVADisplay, image.image_id);
+        }
+
+        // perform a cl flush here
+        if (extMIDs[i]->m_usrAddr != NULL) {
+            vp9CLflush((void*)extMIDs[i]->m_usrAddr, extNativeBufferSize);
         }
         
         extMappedNativeBufferCount++;
