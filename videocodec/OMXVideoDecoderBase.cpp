@@ -659,6 +659,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
                  paramPortDefinitionOutput.nBufferCountActual,
                  formatInfo->actualBufferNeeded);
             paramPortDefinitionOutput.nBufferCountActual = mNativeBufferCount = formatInfo->actualBufferNeeded;
+            paramPortDefinitionOutput.nBufferCountMin = formatInfo->actualBufferNeeded - 4;
             force_realloc = 1;
         }
     }
@@ -904,12 +905,12 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBufferModeSpecific(OMX_PTR pStructur
 
     OMX_PARAM_PORTDEFINITIONTYPE port_def;
     memcpy(&port_def,port->GetPortDefinition(),sizeof(port_def));
-    port_def.nBufferCountMin = 1;
     if (mEnableAdaptivePlayback) {
         SetMaxOutputBufferCount(&port_def);
     } else {
         port_def.nBufferCountActual = mNativeBufferCount;
     }
+    port_def.nBufferCountMin = port_def.nBufferCountActual - 4;
     port_def.format.video.cMIMEType = (OMX_STRING)VA_VED_RAW_MIME_TYPE;
     port_def.format.video.eColorFormat = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar;
     port_def.format.video.eColorFormat = GetOutputColorFormat(
