@@ -959,7 +959,7 @@ OMX_ERRORTYPE OMXVideoEncoderAVC::SetConfigVideoNalSize(OMX_PTR pStructure) {
         return OMX_ErrorUnsupportedSetting;
     }
     VideoConfigNALSize configNalSize;
-    configNalSize.maxSliceSize = mConfigNalSize.nNaluBytes * 8;
+    configNalSize.maxSliceSize = mConfigNalSize.nNaluBytes; 
     retStatus = mVideoEncoder->setConfig(&configNalSize);
     if(retStatus != ENCODE_SUCCESS) {
         LOGW("set NAL size config failed");

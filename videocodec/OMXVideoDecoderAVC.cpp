@@ -15,7 +15,7 @@
 */
 
 
-// #define LOG_NDEBUG 0
+//#define LOG_NDEBUG 0
 #define LOG_TAG "OMXVideoDecoder"
 #include <utils/Log.h>
 #include "OMXVideoDecoderAVC.h"
@@ -145,6 +145,16 @@ OMX_ERRORTYPE OMXVideoDecoderAVC::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE *buff
     // OMX_BUFFERFLAG_ENDOFFRAME is an optional flag
     if (buffer->nFlags & (OMX_BUFFERFLAG_ENDOFFRAME | OMX_BUFFERFLAG_EOS)) {
         // TODO: if OMX_BUFFERFLAG_ENDOFFRAME indicates end of a NAL unit and in OMXVideoDecodeBase
+        // buffer accumulated contains a corrupted frame and new frame is coming
+        if (mTimeStamp != buffer->nTimeStamp && mFilledLen != 0) {
+            LOGI("buffer accumulated contains a corrupted frame and new frame is coming!");
+            ret = FillDecodeBuffer(p);
+            CHECK_RETURN_VALUE("FillDecodeBuffer");
+            // retain the current buffer
+            *retain = BUFFER_RETAIN_GETAGAIN;
+            return ret;
+        }
+
         // we set buffer flag to HAS_COMPLETE_FRAME,  corruption will happen
         mTimeStamp = buffer->nTimeStamp;
         if (mFilledLen == 0) {
@@ -177,12 +187,16 @@ OMX_ERRORTYPE OMXVideoDecoderAVC::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE *buff
         // middle/end of fragmented buffer (mFilledLen != 0)
         ret = AccumulateBuffer(buffer);
         CHECK_RETURN_VALUE("AccumulateBuffer");
+        if (buffer->nFilledLen != 0) {
+            mTimeStamp = buffer->nTimeStamp;
+        }
         ret = OMX_ErrorNotReady;
     }
-
+#if 0
     if (buffer->nFilledLen != 0) {
         mTimeStamp = buffer->nTimeStamp;
     }
+#endif
     return ret;
 }
 
