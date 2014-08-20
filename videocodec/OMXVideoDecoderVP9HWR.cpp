@@ -735,7 +735,7 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::SetParamVideoVp9(OMX_PTR pStructure)
 OMX_COLOR_FORMATTYPE OMXVideoDecoderVP9HWR::GetOutputColorFormat(int width, int height)
 {
     LOGV("Output color format is OMX_INTEL_COLOR_FormatHalYV12.");
-    return OMX_INTEL_COLOR_FormatHalYV12; //HAL_PIXEL_FORMAT_YV12;
+    return (OMX_COLOR_FORMATTYPE)OMX_INTEL_COLOR_FormatHalYV12; //HAL_PIXEL_FORMAT_YV12;
 }
 
 OMX_ERRORTYPE OMXVideoDecoderVP9HWR::GetDecoderOutputCropSpecific(OMX_PTR pStructure)
@@ -794,8 +794,8 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::SetNativeBufferModeSpecific(OMX_PTR pStruct
 
     OMX_PARAM_PORTDEFINITIONTYPE port_def;
     memcpy(&port_def,port->GetPortDefinition(),sizeof(port_def));
-    port_def.nBufferCountMin = 1;
     port_def.nBufferCountActual = mNativeBufferCount;
+    port_def.nBufferCountMin = port_def.nBufferCountActual - 4;
     port_def.format.video.cMIMEType = (OMX_STRING)VA_VED_RAW_MIME_TYPE;
     port_def.format.video.eColorFormat = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar;
 
