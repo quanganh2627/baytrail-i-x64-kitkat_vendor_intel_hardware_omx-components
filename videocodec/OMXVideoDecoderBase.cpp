@@ -452,7 +452,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::PrepareConfigBuffer(VideoConfigBuffer *p) {
         p->graphicBufferColorFormat = mGraphicBufferParam.graphicBufferColorFormat;
         p->graphicBufferWidth = mGraphicBufferParam.graphicBufferWidth;
         p->graphicBufferHeight = mGraphicBufferParam.graphicBufferHeight;
-        if (p->graphicBufferColorFormat == OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled
+        if (p->graphicBufferColorFormat == (OMX_COLOR_FORMATTYPE)OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled
 #ifdef USE_GEN_HW
             || p->graphicBufferColorFormat == HAL_PIXEL_FORMAT_NV12_X_TILED_INTEL
 #endif
@@ -912,7 +912,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBufferModeSpecific(OMX_PTR pStructur
     }
     port_def.nBufferCountMin = port_def.nBufferCountActual - 4;
     port_def.format.video.cMIMEType = (OMX_STRING)VA_VED_RAW_MIME_TYPE;
-    port_def.format.video.eColorFormat = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar;
+    port_def.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar;
     port_def.format.video.eColorFormat = GetOutputColorFormat(
                         port_def.format.video.nFrameWidth,
                         port_def.format.video.nFrameHeight);
@@ -1025,13 +1025,13 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetErrorBuffers(OMX_PTR pStructure) {
 
 OMX_COLOR_FORMATTYPE OMXVideoDecoderBase::GetOutputColorFormat(int width, int height) {
 #ifndef VED_TILING
-    return OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar;
+    return (OMX_COLOR_FORMATTYPE)OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar;
 #else
     if (width > 1280 && width <= 2048) {
         LOGI("HD Video and use tiled format");
-        return OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled;
+        return (OMX_COLOR_FORMATTYPE)OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled;
     } else {
-        return OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar;
+        return (OMX_COLOR_FORMATTYPE)OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar;
     }
 #endif
 }

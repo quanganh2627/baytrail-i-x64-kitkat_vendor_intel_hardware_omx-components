@@ -328,7 +328,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVC::SetParamVideoAVCProfileLevel(OMX_PTR pStructur
 OMX_COLOR_FORMATTYPE OMXVideoDecoderAVC::GetOutputColorFormat(int width, int height)
 {
 #ifdef USE_GEN_HW
-    return OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled;
+    return (OMX_COLOR_FORMATTYPE)OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled;
 #else
     return OMXVideoDecoderBase::GetOutputColorFormat(width, height);
 #endif

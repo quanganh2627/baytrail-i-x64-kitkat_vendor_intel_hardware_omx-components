@@ -25,6 +25,7 @@
 #include <OMX_VideoExt.h>
 #include <OMX_IntelErrorTypes.h>
 #include <OMX_IntelColorFormatExt.h>
+#include <OMX_IntelVideoExt.h>
 
 #include <portbase.h>
 #include <portvideo.h>

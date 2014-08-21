@@ -453,6 +453,7 @@ else ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
 LOCAL_C_INCLUDES += $(TOP)/vendor/intel/hardware/PRIVATE/ufo/inc/libpavp
 
 LOCAL_SHARED_LIBRARIES += libpavp
+LOCAL_LDLIBS += -ldl
 
 LOCAL_SRC_FILES += securevideo/baytrail/OMXVideoDecoderAVCSecure.cpp
 

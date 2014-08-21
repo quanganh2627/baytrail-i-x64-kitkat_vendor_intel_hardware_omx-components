@@ -24,10 +24,15 @@
 #include <va/va_android.h>
 #include <VideoEncoderHost.h>
 
-#define LOGV(...) LOGI_IF(mOmxLogLevel, __VA_ARGS__)
-#define LOGI(...) LOGI_IF(mOmxLogLevel, __VA_ARGS__)
-#define LOGW(...) LOGI_IF(mOmxLogLevel, __VA_ARGS__)
-#define LOGD(...) LOGI_IF(mOmxLogLevel, __VA_ARGS__)
+#undef LOGV
+#undef LOGI
+#undef LOGW
+#undef LOGD
+
+#define LOGV(...) ALOGV_IF(mOmxLogLevel, __VA_ARGS__)
+#define LOGI(...) ALOGI_IF(mOmxLogLevel, __VA_ARGS__)
+#define LOGW(...) ALOGW_IF(mOmxLogLevel, __VA_ARGS__)
+#define LOGD(...) ALOGD_IF(mOmxLogLevel, __VA_ARGS__)
 
 using android::sp;
 

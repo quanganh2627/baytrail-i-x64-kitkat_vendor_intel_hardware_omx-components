@@ -18,6 +18,12 @@
 #define OMX_COMPONENT_DEFINES_H_
 
 
+#define LOGV ALOGV
+#define LOGI ALOGI
+#define LOGW ALOGW
+#define LOGD ALOGD
+#define LOGE ALOGE
+#define LOGV_IF ALOGV_IF
 
 #define DECLARE_HANDLER(CLASS, FUNC)\
     static OMX_ERRORTYPE Get##FUNC(void *inst, OMX_PTR pStructure) {\
@@ -114,5 +120,6 @@
     }\
     struct wrs_omxil_cmodule_ops_s gOps = {CreateInstance};\
     struct wrs_omxil_cmodule_s WRS_OMXIL_CMODULE_SYMBOL = {gName, &gRole, 1, &gOps};
+
 
 #endif /* OMX_COMPONENT_DEFINES_H_ */

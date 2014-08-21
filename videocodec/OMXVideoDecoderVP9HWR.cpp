@@ -797,7 +797,7 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::SetNativeBufferModeSpecific(OMX_PTR pStruct
     port_def.nBufferCountActual = mNativeBufferCount;
     port_def.nBufferCountMin = port_def.nBufferCountActual - 4;
     port_def.format.video.cMIMEType = (OMX_STRING)VA_VED_RAW_MIME_TYPE;
-    port_def.format.video.eColorFormat = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar;
+    port_def.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar;
 
     // add borders for libvpx decode need.
     port_def.format.video.nFrameHeight += VPX_DECODE_BORDER * 2;

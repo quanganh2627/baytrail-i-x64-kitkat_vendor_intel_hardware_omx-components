@@ -315,7 +315,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
 
 OMX_COLOR_FORMATTYPE OMXVideoDecoderAVCSecure::GetOutputColorFormat(int width, int height) {
     // CHT HWC expects Tiled output color format for all resolution
-    return OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled;
+    return (OMX_COLOR_FORMATTYPE)OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled;
 }
 
 OMX_ERRORTYPE OMXVideoDecoderAVCSecure::BuildHandlerList(void) {
@@ -380,7 +380,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::SetNativeBufferMode(OMX_PTR pStructure) 
 
     OMX_PARAM_PORTDEFINITIONTYPE port_def;
     memcpy(&port_def,port->GetPortDefinition(),sizeof(port_def));
-    port_def.format.video.eColorFormat = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled;
+    port_def.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar_Tiled;
     port->SetPortDefinition(&port_def,true);
 
     return OMX_ErrorNone;
