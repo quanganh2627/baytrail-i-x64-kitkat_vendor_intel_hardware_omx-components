@@ -848,7 +848,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBuffer(OMX_PTR pStructure) {
          mGraphicBufferParam.graphicBufferColorFormat = param->nativeBuffer->format;
          mGraphicBufferParam.graphicBufferStride = param->nativeBuffer->stride;
          mGraphicBufferParam.graphicBufferWidth = param->nativeBuffer->width;
-         mGraphicBufferParam.graphicBufferHeight = param->nativeBuffer->height;
+         mGraphicBufferParam.graphicBufferHeight = (param->nativeBuffer->height + 0xf) & ~0xf;
     }
 
     *(param->bufferHeader) = *buf_hdr;
