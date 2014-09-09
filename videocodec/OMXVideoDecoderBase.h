@@ -123,7 +123,7 @@ protected:
     WorkingMode mWorkingMode;
     bool mErrorReportEnabled;
 
-    OMX_VIDEO_OUTPUT_ERROR_BUFFERS mErrorBuffers;
+    OMX_VIDEO_ERROR_BUFFER mErrorBuffers[MAX_GRAPHIC_BUFFER_NUM];
 
     GraphicBufferParam mGraphicBufferParam;
     uint32_t mOMXBufferHeaderTypePtrNum;

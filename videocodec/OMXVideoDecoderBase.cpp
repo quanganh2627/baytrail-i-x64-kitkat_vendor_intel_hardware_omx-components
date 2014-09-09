@@ -536,20 +536,12 @@ OMX_ERRORTYPE OMXVideoDecoderBase::FillRenderBuffer(OMX_BUFFERHEADERTYPE **pBuff
     OMX_U32 inportBufferFlags, OMX_BOOL *isResolutionChange) {
     OMX_BUFFERHEADERTYPE *buffer = *pBuffer;
     OMX_BUFFERHEADERTYPE *buffer_orign = buffer;
-    VideoErrorBuffer *ErrBufPtr = NULL;
     VideoErrorBuffer errBuf;
 
     if (mWorkingMode != GRAPHICBUFFER_MODE && buffer->pPlatformPrivate) {
         VideoRenderBuffer *p = (VideoRenderBuffer *)buffer->pPlatformPrivate;
         p->renderDone = true;
         buffer->pPlatformPrivate = NULL;
-    }
-
-    if (mWorkingMode == GRAPHICBUFFER_MODE && mErrorReportEnabled) {
-        if (buffer->pOutputPortPrivate == NULL)
-            LOGV("The App doesn't provide the output buffer for error reporting");
-        else
-            ErrBufPtr = (VideoErrorBuffer *)buffer->pOutputPortPrivate;
     }
 
     bool draining = (inportBufferFlags & OMX_BUFFERFLAG_EOS);
@@ -584,25 +576,12 @@ OMX_ERRORTYPE OMXVideoDecoderBase::FillRenderBuffer(OMX_BUFFERHEADERTYPE **pBuff
 
     if (mWorkingMode == GRAPHICBUFFER_MODE) {
         if (buffer_orign != buffer) {
-            VideoErrorBuffer *ErrBufOutPtr = NULL;
-            ErrBufOutPtr = (VideoErrorBuffer *)buffer->pOutputPortPrivate;
-            if (ErrBufPtr && ErrBufOutPtr) {
-                memcpy(ErrBufOutPtr, &errBuf, sizeof(VideoErrorBuffer));
-                memset(ErrBufPtr, 0, sizeof(VideoErrorBuffer));
-            }
             *retain = BUFFER_RETAIN_OVERRIDDEN;
-        } else {
-            if(ErrBufPtr) memcpy(ErrBufPtr, &errBuf, sizeof(VideoErrorBuffer));
         }
+
         buffer->nFilledLen = sizeof(OMX_U8*);
-        if(mErrorReportEnabled && (renderBuffer->graphicBufferIndex < MAX_ERR_BUFFERS)) {
-            if(errBuf.errorNumber > 0) {
-                memcpy(&(mErrorBuffers.errorBuffers[renderBuffer->graphicBufferIndex]), &errBuf, sizeof(VideoErrorBuffer));
-                buffer->pPlatformPrivate = (void *)renderBuffer->graphicBufferIndex;
-            } else {
-                buffer->pPlatformPrivate = (void *)0xffffffff; // means no error for this buffer
-                memset(&(mErrorBuffers.errorBuffers[renderBuffer->graphicBufferIndex]), 0, sizeof(VideoErrorBuffer));
-            }
+        if(mErrorReportEnabled && (renderBuffer->graphicBufferIndex < MAX_GRAPHIC_BUFFER_NUM)) {
+            memcpy(&(mErrorBuffers[renderBuffer->graphicBufferIndex]), &errBuf, sizeof(VideoErrorBuffer));
         } else {
             if(mErrorReportEnabled) LOGE("The erro buffer number is smaller than the Graphic buffer, please increase the error buffer number");
         }
@@ -1019,7 +998,12 @@ OMX_ERRORTYPE OMXVideoDecoderBase::GetErrorBuffers(OMX_PTR pStructure) {
     OMX_VIDEO_OUTPUT_ERROR_BUFFERS *p = (OMX_VIDEO_OUTPUT_ERROR_BUFFERS *)pStructure;
     CHECK_TYPE_HEADER(p);
     CHECK_PORT_INDEX(p, OUTPORT_INDEX);
-    memcpy(p, &mErrorBuffers, sizeof(OMX_VIDEO_OUTPUT_ERROR_BUFFERS));
+    if (p->nErrorBufIndex >= MAX_GRAPHIC_BUFFER_NUM)
+    {
+        LOGE("The error buffer index(%d) is too big", p->nErrorBufIndex);
+        return OMX_ErrorBadParameter;
+    }
+    memcpy(&(p->errorBuffers), &mErrorBuffers[p->nErrorBufIndex], sizeof(OMX_VIDEO_ERROR_BUFFER));
     return OMX_ErrorNone;
 }
 
