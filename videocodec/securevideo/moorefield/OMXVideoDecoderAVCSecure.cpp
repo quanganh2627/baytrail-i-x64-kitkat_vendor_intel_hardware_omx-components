@@ -168,6 +168,10 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorDeinit(void)
         {
             // Chaabi session is destroyed in liboemcrypto, when WV Modular
             // session is being destroyed.
+            uint32_t ret = drm_stop_playback();
+            if (ret != DRM_WV_MOD_SUCCESS) {
+                ALOGE("drm_stop_playback failed: (0x%x)", ret);
+            }
         }
         break;
 
@@ -198,6 +202,12 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorDeinit(void)
 OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorStart(void) {
 
     mSessionPaused = false;
+
+    uint32_t ret = drm_start_playback();
+    if (ret != DRM_WV_MOD_SUCCESS) {
+        ALOGE("drm_start_playback failed: (0x%x)", ret);
+    }
+
     return OMXVideoDecoderBase::ProcessorStart();
 }
 
