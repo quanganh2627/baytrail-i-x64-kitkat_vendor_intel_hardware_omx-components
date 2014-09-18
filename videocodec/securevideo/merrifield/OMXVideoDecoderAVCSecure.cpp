@@ -64,8 +64,8 @@ static const char* AVC_SECURE_MIME_TYPE = "video/avc-secure";
 #ifdef ANDROID
 #define DUMP_EOL    ""
 #else
-#define LOGV    printf
-#define LOGE    printf
+#define ALOGV    printf
+#define ALOGE    printf
 #define DUMP_EOL    "\n"
 #endif // ANDROID
 
@@ -107,7 +107,7 @@ static void DumpNaluDataBuffer(uint32_t nalu, const uint8_t* start, uint32_t siz
 
     DumpBufferToString(str, STR_SIZE, start, size) ;
 
-    LOGV("NALU-dump(nalu %u): data: %s" DUMP_EOL, nalu, str) ;
+    ALOGV("NALU-dump(nalu %u): data: %s" DUMP_EOL, nalu, str) ;
 }
 // End of DumpNaluDataBuffer()
 
@@ -123,7 +123,7 @@ static void DumpBuffer(const char* prefix, const uint8_t* start, uint32_t size)
         prefix = "" ;
     }
 
-    LOGV("%s: ptr=%p, size=%u, data=%s" DUMP_EOL, prefix, start, size, str) ;
+    ALOGV("%s: ptr=%p, size=%u, data=%s" DUMP_EOL, prefix, start, size, str) ;
 }
 // End of DumpBuffer()
 
@@ -140,11 +140,11 @@ static void DumpNaluHeaderBuffer(const uint8_t* const start, uint32_t size)
     Copy4Bytes(&numNALUs, current) ;
     current += sizeof(numNALUs) ;
 
-    LOGV("NALU-dump: num NALUs = %u\n", numNALUs) ;
+    ALOGV("NALU-dump: num NALUs = %u\n", numNALUs) ;
 
     if (numNALUs > MAX_NALUS_IN_FRAME)
     {
-        LOGE("NALU-dump: ERROR, num NALUs is too big (%u)" DUMP_EOL, numNALUs) ;
+        ALOGE("NALU-dump: ERROR, num NALUs is too big (%u)" DUMP_EOL, numNALUs) ;
     }
 
     for (uint32_t nalu = 0; nalu < numNALUs; ++nalu)
@@ -161,7 +161,7 @@ static void DumpNaluHeaderBuffer(const uint8_t* const start, uint32_t size)
         Copy4Bytes(&data_size, current) ;
         current += sizeof(data_size) ;
 
-        LOGV("NALU-dump(nalu %u): imr_offset = %u, nalu_size = %u, data_size = %u" DUMP_EOL,
+        ALOGV("NALU-dump(nalu %u): imr_offset = %u, nalu_size = %u, data_size = %u" DUMP_EOL,
             nalu, imr_offset, nalu_size, data_size) ;
 
         DumpNaluDataBuffer(nalu, current, data_size) ;
@@ -207,7 +207,7 @@ static void DumpBuffer2(const char* prefix, const uint8_t* start, uint32_t size)
         prefix = "" ;
     }
 
-    LOGV("%s%s" DUMP_EOL, prefix, str) ;
+    ALOGV("%s%s" DUMP_EOL, prefix, str) ;
 }
 // End of DumpBuffer2()
 
@@ -225,11 +225,11 @@ static void DumpProtectedDataBuffer(const char* prefix, ProtectedDataBuffer* buf
     if (buf->magic != PROTECTED_DATA_BUFFER_MAGIC)
     {
         const uint8_t* p = (uint8_t*) &buf->magic ;
-        LOGV("%sWrong magic: %02x %02x %02x %02x" DUMP_EOL, prefix, p[0], p[1], p[2], p[3]) ;
+        ALOGV("%sWrong magic: %02x %02x %02x %02x" DUMP_EOL, prefix, p[0], p[1], p[2], p[3]) ;
         return ;
     }
 
-    LOGV("%smagic: ok, drmScheme: %u (%s), clear: %u, size: %u, num PES: %u" DUMP_EOL, prefix,
+    ALOGV("%smagic: ok, drmScheme: %u (%s), clear: %u, size: %u, num PES: %u" DUMP_EOL, prefix,
         buf->drmScheme, DrmSchemeToString(buf->drmScheme), buf->clear, buf->size, buf->numPesBuffers) ;
 
     if (buf->numPesBuffers == 0)
@@ -249,7 +249,7 @@ static void DumpProtectedDataBuffer(const char* prefix, ProtectedDataBuffer* buf
             DumpBufferToString(str, STR_SIZE,
                 buf->data + buf->pesBuffers[i].pesDataOffset, dumpLength) ;
 
-            LOGV("PES %u: streamCounter: %u, inputCounter: %llu, offset: %u, size: %u, PES data: %s" DUMP_EOL,
+            ALOGV("PES %u: streamCounter: %u, inputCounter: %llu, offset: %u, size: %u, PES data: %s" DUMP_EOL,
                 i, buf->pesBuffers[i].streamCounter, buf->pesBuffers[i].inputCounter,
                 buf->pesBuffers[i].pesDataOffset, buf->pesBuffers[i].pesSize, str) ;
         }
@@ -261,11 +261,11 @@ void DumpVideoFrameInfo(frame_info_t* fInfo)
 {
     if (fInfo == NULL) { return ; }
 
-    LOGV("frame_info_t: data = %p, size = %u, num_nalus = %u", fInfo->data, fInfo->size, fInfo->num_nalus) ;
+    ALOGV("frame_info_t: data = %p, size = %u, num_nalus = %u", fInfo->data, fInfo->size, fInfo->num_nalus) ;
 
     for (uint32_t i = 0; i < fInfo->num_nalus; ++i)
     {
-        LOGV("nalu_info_t: type = %#x, offset = %u (%#x), data = %p, length = %u",
+        ALOGV("nalu_info_t: type = %#x, offset = %u (%#x), data = %p, length = %u",
             fInfo->nalus[i].type, fInfo->nalus[i].offset, fInfo->nalus[i].offset,
             fInfo->nalus[i].data, fInfo->nalus[i].length) ;
 
@@ -296,7 +296,7 @@ OMXVideoDecoderAVCSecure::OMXVideoDecoderAVCSecure()
     , mKeepAliveTimer(0)
     , mSessionPaused(false)
 {
-    LOGV("constructor");
+    ALOGV("constructor");
 
     // Override default native buffer count defined in the base class
     mNativeBufferCount = OUTPORT_NATIVE_BUFFER_COUNT;
@@ -307,12 +307,12 @@ OMXVideoDecoderAVCSecure::OMXVideoDecoderAVCSecure()
         (!strcmp(prop, "1") || !strcasecmp(prop, "true")))
     {
         mNativeBufferCount = OUTPORT_NATIVE_BUFFER_COUNT + 2;
-        LOGI("%s: DRM_SCHEME_MCAST_SINK is enabled, increase Output port(+2), mNativeBufferCount = %u",
+        ALOGI("%s: DRM_SCHEME_MCAST_SINK is enabled, increase Output port(+2), mNativeBufferCount = %u",
             __FUNCTION__, mNativeBufferCount);
     }
     else
     {
-        LOGI("%s: DRM_SCHEME_MCAST_SINK is NOT enabled, mNativeBufferCount = %u",
+        ALOGI("%s: DRM_SCHEME_MCAST_SINK is NOT enabled, mNativeBufferCount = %u",
             __FUNCTION__, mNativeBufferCount);
     }
 
@@ -321,7 +321,7 @@ OMXVideoDecoderAVCSecure::OMXVideoDecoderAVCSecure()
 
 OMXVideoDecoderAVCSecure::~OMXVideoDecoderAVCSecure()
 {
-    LOGV("destructor");
+    ALOGV("destructor");
 }
 
 OMX_ERRORTYPE OMXVideoDecoderAVCSecure::InitInputPortFormatSpecific(OMX_PARAM_PORTDEFINITIONTYPE *paramPortDefinitionInput)
@@ -334,10 +334,10 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::InitInputPortFormatSpecific(OMX_PARAM_PO
     const char* mime = AVC_SECURE_MIME_TYPE ;
     mVideoDecoder = createVideoDecoder(mime);
     if (!mVideoDecoder) {
-        LOGE("%s: createVideoDecoder failed for \"%s\"", __FUNCTION__, mime);
+        ALOGE("%s: createVideoDecoder failed for \"%s\"", __FUNCTION__, mime);
         return OMX_ErrorNotReady ;
     }
-    LOGV("%s: created video decoder for protected content", __FUNCTION__) ;
+    ALOGV("%s: created video decoder for protected content", __FUNCTION__) ;
 
     // OMX_PARAM_PORTDEFINITIONTYPE
     paramPortDefinitionInput->nBufferCountActual = INPORT_ACTUAL_BUFFER_COUNT;
@@ -345,11 +345,11 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::InitInputPortFormatSpecific(OMX_PARAM_PO
     if ((property_get("media.widi.sink.enabled", prop, NULL) > 0) &&
         (!strcmp(prop, "1") || !strcasecmp(prop, "true")))
     {
-        LOGI("%s: DRM_SCHEME_MCAST_SINK is enabled", __FUNCTION__);
+        ALOGI("%s: DRM_SCHEME_MCAST_SINK is enabled", __FUNCTION__);
         paramPortDefinitionInput->nBufferCountActual = INPORT_MIN_BUFFER_COUNT;
     }
 
-    LOGI("%s: nBufferCountActual = %lu", __FUNCTION__, paramPortDefinitionInput->nBufferCountActual) ;
+    ALOGI("%s: nBufferCountActual = %lu", __FUNCTION__, paramPortDefinitionInput->nBufferCountActual) ;
 
     paramPortDefinitionInput->nBufferCountMin = INPORT_MIN_BUFFER_COUNT;
     paramPortDefinitionInput->nBufferSize = INPORT_BUFFER_SIZE;
@@ -388,7 +388,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorDeinit(void)
             // the session in liboemcrypto, so have to destroy it here.
 
             uint32_t sepres = drm_destroy_session(WV_SESSION_ID);
-            LOGW_IF(sepres != 0,
+            ALOGW_IF(sepres != 0,
                 "%s: WV Classic: drm_destroy_session returned %#x", __FUNCTION__, sepres);
         }
         break ;
@@ -408,7 +408,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorDeinit(void)
         break ;
 
         default:
-            LOGW("%s: trying to deinit unknown DRM scheme %u", __FUNCTION__,  mDrmScheme) ;
+            ALOGW("%s: trying to deinit unknown DRM scheme %u", __FUNCTION__,  mDrmScheme) ;
     }
     // End of switch
 
@@ -450,7 +450,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorProcess(
     ProtectedDataBuffer *dataBuffer = (ProtectedDataBuffer *)pInput->pBuffer;
     if (dataBuffer->magic != PROTECTED_DATA_BUFFER_MAGIC)
     {
-        LOGE("%s: protected data buffer pointer %p doesn't have the right magic", __FUNCTION__, dataBuffer) ;
+        ALOGE("%s: protected data buffer pointer %p doesn't have the right magic", __FUNCTION__, dataBuffer) ;
         return OMX_ErrorBadParameter ;
     }
 
@@ -463,7 +463,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorProcess(
 
         ret_value = timer_create(CLOCK_REALTIME, &sev, &mKeepAliveTimer);
         if (ret_value != 0) {
-            LOGE("Failed to create timer.");
+            ALOGE("Failed to create timer.");
         } else {
             struct itimerspec its;
             its.it_value.tv_sec = -1; // never expire
@@ -473,14 +473,14 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorProcess(
 
             ret_value = timer_settime(mKeepAliveTimer, TIMER_ABSTIME, &its, NULL);
             if (ret_value != 0) {
-                LOGE("Failed to set timer.");
+                ALOGE("Failed to set timer.");
             }
         }
     }
 
     if (dataBuffer->size == 0) {
         // error occurs during decryption.
-        LOGW("%s: size of returned data buffer is 0, decryption fails, flushing all ports.", __FUNCTION__);
+        ALOGW("%s: size of returned data buffer is 0, decryption fails, flushing all ports.", __FUNCTION__);
         mVideoDecoder->flush();
         usleep(FLUSH_WAIT_INTERVAL);
         OMX_BUFFERHEADERTYPE *pOutput = *pBuffers[OUTPORT_INDEX];
@@ -495,7 +495,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorProcess(
     OMX_ERRORTYPE ret;
     ret = OMXVideoDecoderBase::ProcessorProcess(pBuffers, retains, numberBuffers);
     if (ret != OMX_ErrorNone) {
-        LOGE("OMXVideoDecoderBase::ProcessorProcess failed. Result: %#x", ret);
+        ALOGE("OMXVideoDecoderBase::ProcessorProcess failed. Result: %#x", ret);
         return ret;
     }
 
@@ -536,7 +536,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareClassicWVDecodeBuffer(OMX_BUFFERH
     {
         // For this DRM scheme, the config data comes encrypted in the stram.
         // We should ignore anything else that claims to be codec data.
-        LOGW("%s: ignoring codec data buffer", __FUNCTION__) ;
+        ALOGW("%s: ignoring codec data buffer", __FUNCTION__) ;
         return OMX_ErrorNone ;
     }
 
@@ -545,7 +545,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareClassicWVDecodeBuffer(OMX_BUFFERH
    p->flag |= HAS_COMPLETE_FRAME;
 
    if (buffer->nOffset != 0) {
-       LOGW("buffer offset %lu is not zero!!!", buffer->nOffset);
+       ALOGW("buffer offset %lu is not zero!!!", buffer->nOffset);
    }
 
    ProtectedDataBuffer *dataBuffer = (ProtectedDataBuffer *)buffer->pBuffer;
@@ -565,7 +565,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareClassicWVDecodeBuffer(OMX_BUFFERH
        // Use same video buffer to fill NALU headers returned by chaabi,
        // Adding 4 because the first 4 bytes after databuffer will be used to store length of NALU headers
        if((nalu_headers.frame_size + NALU_BUFFER_SIZE) > INPORT_BUFFER_SIZE){
-           LOGE("Not enough buffer for NALU headers");
+           ALOGE("Not enough buffer for NALU headers");
            return OMX_ErrorOverflow;
        }
 
@@ -574,12 +574,12 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareClassicWVDecodeBuffer(OMX_BUFFERH
 
        uint32_t res = drm_wv_return_naluheaders(WV_SESSION_ID, &nalu_headers);
        if (res == DRM_FAIL_FW_SESSION) {
-           LOGW("Drm_WV_ReturnNALUHeaders failed. Session is disabled.");
+           ALOGW("Drm_WV_ReturnNALUHeaders failed. Session is disabled.");
            mSessionPaused = true;
            ret =  OMX_ErrorNotReady;
        } else if (res != 0) {
            mSessionPaused = false;
-           LOGE("Drm_WV_ReturnNALUHeaders failed. Error = %#x, frame_size: %d, len = %lu", res, nalu_headers.frame_size, buffer->nFilledLen);
+           ALOGE("Drm_WV_ReturnNALUHeaders failed. Error = %#x, frame_size: %d, len = %lu", res, nalu_headers.frame_size, buffer->nFilledLen);
            ret = OMX_ErrorHardware;
        } else {
            mSessionPaused = false;
@@ -616,7 +616,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareModularWVDecodeBuffer(OMX_BUFFERH
     // if flag is set, buffer will only contain codec data.
     // For WV Modular, we must not ignore the codec data.
     if (buffer->nFlags & OMX_BUFFERFLAG_CODECCONFIG) {
-        LOGI("WV Modular: received AVC codec data.");
+        ALOGI("WV Modular: received AVC codec data.");
         ProtectedDataBuffer *dataBuffer = (ProtectedDataBuffer *)buffer->pBuffer;
         DumpVideoFrameInfo((frame_info_t*) dataBuffer->data) ;
     }
@@ -624,7 +624,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareModularWVDecodeBuffer(OMX_BUFFERH
     p->flag |= HAS_COMPLETE_FRAME | IS_SUBSAMPLE_ENCRYPTION;
 
     if (buffer->nOffset != 0) {
-        LOGW("buffer offset %lu is not zero!!!", buffer->nOffset);
+        ALOGW("buffer offset %lu is not zero!!!", buffer->nOffset);
     }
 
     ProtectedDataBuffer *dataBuffer = (ProtectedDataBuffer *)buffer->pBuffer;
@@ -641,13 +641,13 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
     {
         // For this DRM scheme, the config data comes encrypted in the stram.
         // We should ignore anything else that claims to be codec data.
-        LOGW("%s: ignoring codec data buffer", __FUNCTION__) ;
+        ALOGW("%s: ignoring codec data buffer", __FUNCTION__) ;
         return OMX_ErrorNone ;
     }
 
     if (buffer->nOffset != 0)
     {
-        LOGE("%s: error: buffer offset %lu is not zero", __FUNCTION__, buffer->nOffset);
+        ALOGE("%s: error: buffer offset %lu is not zero", __FUNCTION__, buffer->nOffset);
         return OMX_ErrorBadParameter ;
     }
 
@@ -656,18 +656,18 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
 
     if (dataBuffer->numPesBuffers > MAX_PES_PACKETS_PER_FRAME)
     {
-        LOGE("%s: numPesBuffers = %u, but maximum is %u" DUMP_EOL,
+        ALOGE("%s: numPesBuffers = %u, but maximum is %u" DUMP_EOL,
             __FUNCTION__, dataBuffer->numPesBuffers, MAX_PES_PACKETS_PER_FRAME) ;
         return OMX_ErrorBadParameter ;
     }
 
-    LOGV("%s: dataBuffer->clear = %u, dataBuffer->size = %u",
+    ALOGV("%s: dataBuffer->clear = %u, dataBuffer->size = %u",
         __FUNCTION__, dataBuffer->clear, dataBuffer->size) ;
 
     if (dataBuffer->clear)
     {
         // TODO: refactor -- move blocks of code into separate functions
-        LOGV("%s: encrypting clear content to IED", __FUNCTION__) ;
+        ALOGV("%s: encrypting clear content to IED", __FUNCTION__) ;
 
         const uint32_t alignedDataSize = ALIGN_16_BYTES(dataBuffer->size) ;
 
@@ -678,7 +678,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
         // choke on this data.
         memset(dataBuffer->data + dataBuffer->size, 0, alignedDataSize - dataBuffer->size);
 
-        LOGV("%s: zeroed %u bytes at address %p",
+        ALOGV("%s: zeroed %u bytes at address %p",
             __FUNCTION__, alignedDataSize - dataBuffer->size,
             dataBuffer->data + dataBuffer->size) ;
 
@@ -695,7 +695,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
                     dataBuffer->data, alignedDataSize) ;
             if (result != HDCP_SUCCESS)
             {
-                LOGE("%s: error: hdcp2x_rx_decrypt_pes(HDCP_CLEAR_CONTENT_IED_ENCRYPT_FLAG"
+                ALOGE("%s: error: hdcp2x_rx_decrypt_pes(HDCP_CLEAR_CONTENT_IED_ENCRYPT_FLAG"
                         "streamCounter = 0, inputCounter = 0, "
                         "data = %p, alignedDataSize = %u) returned %#x",
                         __FUNCTION__, dataBuffer->data, alignedDataSize, result) ;
@@ -704,7 +704,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
             // Update the flags to indicate IED transcription is done
             dataBuffer->flags &= ~PDB_FLAG_NEED_TRANSCRIPTION;
         } else {
-            LOGI("Skipping IED encryption as frame is already IED transcripted...\n");
+            ALOGI("Skipping IED encryption as frame is already IED transcripted...\n");
         }
 
         DumpBuffer2("OMX: IED encrypted data, up to 64 bytes: ", dataBuffer->data, dumpLength) ;
@@ -716,7 +716,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
             + NALU_BUFFER_SIZE ;
         if (maxDataBufferSize > MAX_PROT_BUFFER_DATA_SIZE)
         {
-            LOGE("%s: maximum required buffer space %u exceeds data buffer capacity %u",
+            ALOGE("%s: maximum required buffer space %u exceeds data buffer capacity %u",
                 __FUNCTION__, maxDataBufferSize, MAX_PROT_BUFFER_DATA_SIZE) ;
             return OMX_ErrorOverflow ;
         }
@@ -729,7 +729,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
         // for the location to receive header data size.
         uint8_t* headerData = encryptedData + alignedDataSize + sizeof(uint32_t) ;
 
-        LOGV("%s: encryptedData = %p, encryptedDataSize = %u, "
+        ALOGV("%s: encryptedData = %p, encryptedDataSize = %u, "
             "alignedDataSize = %u, headerSizeLocation = %p, "
             "headerData = %p", __FUNCTION__,
             encryptedData, encryptedDataSize,
@@ -741,7 +741,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
             headerDataSize, headerData, &headerDataSize) ;
         if (result != HDCP_SUCCESS)
         {
-            LOGE("%s: error: hdcp2x_rx_return_nalu(encryptedData = %p, "
+            ALOGE("%s: error: hdcp2x_rx_return_nalu(encryptedData = %p, "
                 "alignedDataSize = %u, parse_size = %u, "
                 "headerData = %p, headerDataSize = %u), returned %#x",
                 __FUNCTION__, encryptedData, alignedDataSize, headerDataSize,
@@ -750,7 +750,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
         }
 
         DumpBuffer2("OMX: SPS/PPS header data: ", headerData, headerDataSize) ;
-        LOGV("header data size = %u", headerDataSize) ;
+        ALOGV("header data size = %u", headerDataSize) ;
 
         *headerSizeLocation = headerDataSize ;
 
@@ -765,13 +765,13 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
     {
         if (dataBuffer->numPesBuffers == 0)
         {
-            LOGE("%s: numPesBuffers is 0, which is incorrect for encrypted buffer" DUMP_EOL,
+            ALOGE("%s: numPesBuffers is 0, which is incorrect for encrypted buffer" DUMP_EOL,
                 __FUNCTION__) ;
             return OMX_ErrorBadParameter ;
         }
         else if (dataBuffer->numPesBuffers == 1)
         {
-            LOGV("%s: numPesBuffers is 1, use combined Chaabi API for transcryption and parsing" DUMP_EOL,
+            ALOGV("%s: numPesBuffers is 1, use combined Chaabi API for transcryption and parsing" DUMP_EOL,
                 __FUNCTION__) ;
 
             const uint32_t pesDataOffset = dataBuffer->pesBuffers[0].pesDataOffset ;
@@ -779,7 +779,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
             // PES data must start on AES block size aligned offset
             if (pesDataOffset % AES_BLOCK_SIZE != 0)
             {
-                LOGE("%s: PES buffer start offset %u is not AES block aligned",
+                ALOGE("%s: PES buffer start offset %u is not AES block aligned",
                     __FUNCTION__, pesDataOffset) ;
                 return OMX_ErrorBadParameter ;
             }
@@ -794,7 +794,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
                 + NALU_BUFFER_SIZE ;
             if (maxDataBufferSize > MAX_PROT_BUFFER_DATA_SIZE)
             {
-                LOGE("%s: maximum required buffer space %u exceeds data buffer capacity %u",
+                ALOGE("%s: maximum required buffer space %u exceeds data buffer capacity %u",
                     __FUNCTION__, maxDataBufferSize, MAX_PROT_BUFFER_DATA_SIZE) ;
                 return OMX_ErrorOverflow ;
             }
@@ -806,7 +806,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
             // for the location to receive header data size.
             uint8_t* headerData = encryptedData + alignedDataSize + sizeof(uint32_t) ;
 
-            LOGV("%s: encryptedData = %p, encryptedDataSize = %u, "
+            ALOGV("%s: encryptedData = %p, encryptedDataSize = %u, "
                 "alignedDataSize = %u, headerSizeLocation = %p, "
                 "headerData = %p", __FUNCTION__,
                 encryptedData, encryptedDataSize,
@@ -821,7 +821,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
             // choke on this data.
             memset(encryptedData + encryptedDataSize, 0, alignedDataSize - encryptedDataSize);
 
-            LOGV("%s: zeroed %u bytes at address %p",
+            ALOGV("%s: zeroed %u bytes at address %p",
                 __FUNCTION__, alignedDataSize - encryptedDataSize,
                 encryptedData + encryptedDataSize) ;
 
@@ -843,7 +843,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
                         headerData, &headerDataSize) ;
                 if (result != HDCP_SUCCESS)
                 {
-                    LOGE("%s: error: hdcp2x_rc_decrypt(streamCounter = %u, inputCounter = %llu, "
+                    ALOGE("%s: error: hdcp2x_rc_decrypt(streamCounter = %u, inputCounter = %llu, "
                             "encryptedData = %p, encryptedDataSize = %u, alignedDataSize = %u, "
                             "headerData = %p) returned %x",
                             __FUNCTION__, dataBuffer->pesBuffers[0].streamCounter,
@@ -856,11 +856,11 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
                 // Update the flags to indicate IED transcription is done
                 dataBuffer->flags &= ~PDB_FLAG_NEED_TRANSCRIPTION;
             } else {
-                LOGI("Skipping HDCP Decryption as frame is already IED transcripted...\n");
+                ALOGI("Skipping HDCP Decryption as frame is already IED transcripted...\n");
             }
             DumpBuffer2("OMX: IED encrypted data, up to 64 bytes: ", encryptedData, dumpLength) ;
             DumpBuffer2("OMX: SPS/PPS header data: ", headerData, headerDataSize) ;
-            LOGV("header data size = %u", headerDataSize) ;
+            ALOGV("header data size = %u", headerDataSize) ;
 
             *headerSizeLocation = headerDataSize ;
 
@@ -870,7 +870,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareMCastSinkWVDecodeBuffer(OMX_BUFFE
         }
         else
         {
-            LOGE("%s: numPesBuffers is %u, this support is not yet implemented" DUMP_EOL,
+            ALOGE("%s: numPesBuffers is %u, this support is not yet implemented" DUMP_EOL,
                 __FUNCTION__, dataBuffer->numPesBuffers) ;
             return OMX_ErrorNotImplemented ;
         }
@@ -890,7 +890,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
 
     if (buffer->nFilledLen == 0)
     {
-        LOGI("%s: nFilledLen is 0, skipping further processing of this buffer", __FUNCTION__) ;
+        ALOGI("%s: nFilledLen is 0, skipping further processing of this buffer", __FUNCTION__) ;
         return OMX_ErrorNone;
     }
 
@@ -902,14 +902,14 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
         if (buffer->nFlags & OMX_BUFFERFLAG_CODECCONFIG)
         {
             // Processing codec data, which is not in ProtectedDataBuffer format
-            LOGV("%s: received AVC codec data (%lu bytes).", __FUNCTION__, buffer->nFilledLen);
+            ALOGV("%s: received AVC codec data (%lu bytes).", __FUNCTION__, buffer->nFilledLen);
             DumpBuffer2("OMX: AVC codec data: ", buffer->pBuffer, buffer->nFilledLen) ;
             return OMX_ErrorNone ;
         }
         else
         {
             // Processing non-codec data, but this buffer is not in ProtectedDataBuffer format
-            LOGE("%s: protected data buffer pointer %p doesn't have the right magic", __FUNCTION__, dataBuffer) ;
+            ALOGE("%s: protected data buffer pointer %p doesn't have the right magic", __FUNCTION__, dataBuffer) ;
             return OMX_ErrorBadParameter ;
         }
     }
@@ -943,7 +943,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
         default:
         {
             mDrmScheme = DRM_SCHEME_NONE ;
-            LOGE("%s: invalid DRM scheme %u", __FUNCTION__, dataBuffer->drmScheme) ;
+            ALOGE("%s: invalid DRM scheme %u", __FUNCTION__, dataBuffer->drmScheme) ;
             return OMX_ErrorBadParameter ;
         }
     }
@@ -998,7 +998,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::GetParamVideoAVCProfileLevel(OMX_PTR pSt
 }
 
 OMX_ERRORTYPE OMXVideoDecoderAVCSecure::SetParamVideoAVCProfileLevel(OMX_PTR pStructure) {
-    LOGW("SetParamVideoAVCProfileLevel is not supported.");
+    ALOGW("SetParamVideoAVCProfileLevel is not supported.");
     return OMX_ErrorUnsupportedSetting;
 }
 
@@ -1007,7 +1007,7 @@ OMX_U8* OMXVideoDecoderAVCSecure::MemAllocDataBuffer(OMX_U32 nSizeBytes, OMX_PTR
     if (p) {
         return p->MemAllocDataBuffer(nSizeBytes);
     }
-    LOGE("%s: NULL pUserData.", __FUNCTION__);
+    ALOGE("%s: NULL pUserData.", __FUNCTION__);
     return NULL;
 }
 
@@ -1017,18 +1017,18 @@ void OMXVideoDecoderAVCSecure::MemFreeDataBuffer(OMX_U8 *pBuffer, OMX_PTR pUserD
         p->MemFreeDataBuffer(pBuffer);
         return;
     }
-    LOGE("%s: NULL pUserData.", __FUNCTION__);
+    ALOGE("%s: NULL pUserData.", __FUNCTION__);
 }
 
 OMX_U8* OMXVideoDecoderAVCSecure::MemAllocDataBuffer(OMX_U32 nSizeBytes)
 {
-    LOGW_IF(nSizeBytes != INPORT_BUFFER_SIZE,
+    ALOGW_IF(nSizeBytes != INPORT_BUFFER_SIZE,
         "%s: size of memory to allocate is %lu, but will allocate %u",
         __FUNCTION__, nSizeBytes, sizeof(ProtectedDataBuffer));
 
     if (mNumInportBuffers >= INPORT_ACTUAL_BUFFER_COUNT)
     {
-        LOGE("%s: cannot allocate buffer: number of inport buffers is %u, which is already at maximum",
+        ALOGE("%s: cannot allocate buffer: number of inport buffers is %u, which is already at maximum",
             __FUNCTION__, mNumInportBuffers) ;
         return NULL ;
     }
@@ -1036,7 +1036,7 @@ OMX_U8* OMXVideoDecoderAVCSecure::MemAllocDataBuffer(OMX_U32 nSizeBytes)
     ProtectedDataBuffer *pBuffer = new ProtectedDataBuffer;
     if (pBuffer == NULL)
     {
-        LOGE("%s: failed to allocate memory.", __FUNCTION__);
+        ALOGE("%s: failed to allocate memory.", __FUNCTION__);
         return NULL;
     }
 
@@ -1046,7 +1046,7 @@ OMX_U8* OMXVideoDecoderAVCSecure::MemAllocDataBuffer(OMX_U32 nSizeBytes)
 
     pBuffer->size = INPORT_BUFFER_SIZE;
 
-    LOGV("Allocating buffer = %#x, data = %#x",  (uint32_t)pBuffer, (uint32_t)pBuffer->data);
+    ALOGV("Allocating buffer = %#x, data = %#x",  (uint32_t)pBuffer, (uint32_t)pBuffer->data);
     return (OMX_U8 *) pBuffer;
 }
 // End of OMXVideoDecoderAVCSecure::MemAllocDataBuffer()
@@ -1055,13 +1055,13 @@ void OMXVideoDecoderAVCSecure::MemFreeDataBuffer(OMX_U8 *pBuffer)
 {
     if (pBuffer == NULL)
     {
-        LOGE("%s: trying to free NULL pointer", __FUNCTION__) ;
+        ALOGE("%s: trying to free NULL pointer", __FUNCTION__) ;
         return;
     }
 
     if (mNumInportBuffers == 0)
     {
-        LOGE("%s: allocated inport buffer count is already 0, cannot delete buffer %p",
+        ALOGE("%s: allocated inport buffer count is already 0, cannot delete buffer %p",
             __FUNCTION__, pBuffer) ;
         return ;
     }
@@ -1069,11 +1069,11 @@ void OMXVideoDecoderAVCSecure::MemFreeDataBuffer(OMX_U8 *pBuffer)
     ProtectedDataBuffer *p = (ProtectedDataBuffer*) pBuffer;
     if (p->magic != PROTECTED_DATA_BUFFER_MAGIC)
     {
-        LOGE("%s: attempting to free buffer with a wrong magic 0x%08x", __FUNCTION__, p->magic) ;
+        ALOGE("%s: attempting to free buffer with a wrong magic 0x%08x", __FUNCTION__, p->magic) ;
         return ;
     }
 
-    LOGV("Freeing Data buffer %p with data = %p", p, p->data);
+    ALOGV("Freeing Data buffer %p with data = %p", p, p->data);
     delete p;
     --mNumInportBuffers ;
 }
@@ -1090,7 +1090,7 @@ void OMXVideoDecoderAVCSecure::KeepAliveTimerCallback() {
     uint32_t timeout = DRM_KEEP_ALIVE_TIMER;
     uint32_t sepres =  drm_keep_alive(WV_SESSION_ID, &timeout);
     if (sepres != 0) {
-        LOGE("Drm_KeepAlive failed. Result = %#x", sepres);
+        ALOGE("Drm_KeepAlive failed. Result = %#x", sepres);
     }
 }
 
