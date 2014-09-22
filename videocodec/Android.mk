@@ -47,6 +47,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderAVC
 ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
+LOCAL_CFLAGS += -DBUF_HEIGHT_ALIGN32
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
@@ -232,6 +233,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderMPEG4
 ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
+LOCAL_CFLAGS += -DBUF_HEIGHT_ALIGN32
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
@@ -292,6 +294,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderH263
 ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
+LOCAL_CFLAGS += -DBUF_HEIGHT_ALIGN32
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
@@ -352,6 +355,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderWMV
 ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
+LOCAL_CFLAGS += -DBUF_HEIGHT_ALIGN32
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
@@ -415,6 +419,8 @@ LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/libsepdrm
 LOCAL_SRC_FILES += securevideo/ctp/OMXVideoDecoderAVCSecure.cpp
 
 LOCAL_CFLAGS += -DVED_TILING
+
+LOCAL_CFLAGS += -DBUF_HEIGHT_ALIGN32
 
 else ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
 #Secure AVC decoder for Merrifield (uses IED)
@@ -625,6 +631,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderPAVC
 ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
+LOCAL_CFLAGS += -DBUF_HEIGHT_ALIGN32
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
