@@ -378,40 +378,11 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorInit(void)
 
 OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorDeinit(void)
 {
-    // Session should be torn down in ProcessorStop, delayed to ProcessorDeinit
-    // to allow remaining frames completely rendered.
-    switch (mDrmScheme)
-    {
-        case DRM_SCHEME_WV_CLASSIC:
-        {
-            // For WV Classic, there's no good way to destroy
-            // the session in liboemcrypto, so have to destroy it here.
-
-            uint32_t sepres = drm_destroy_session(WV_SESSION_ID);
-            ALOGW_IF(sepres != 0,
-                "%s: WV Classic: drm_destroy_session returned %#x", __FUNCTION__, sepres);
-        }
-        break ;
-
-        case DRM_SCHEME_WV_MODULAR:
-        {
-            // Chaabi session is destroyed in liboemcrypto, when WV Modular
-            // session is being destroyed.
-        }
-        break;
-
-        case DRM_SCHEME_MCAST_SINK:
-        {
-            // IED session is descroyed by HDCP authentication code in
-            // WiDi stack.
-        }
-        break ;
-
-        default:
-            ALOGW("%s: trying to deinit unknown DRM scheme %u", __FUNCTION__,  mDrmScheme) ;
+    // Disable IED armed in Chaabi at stop playback
+    uint32_t ret = drm_stop_playback();
+    if (ret != DRM_WV_MOD_SUCCESS) {
+        ALOGE("drm_stop_playback failed: (0x%x)", ret);
     }
-    // End of switch
-
     mDrmScheme = DRM_SCHEME_NONE ;
 
     return OMXVideoDecoderBase::ProcessorDeinit();
@@ -421,6 +392,12 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorDeinit(void)
 OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorStart(void) {
 
     mSessionPaused = false;
+
+    uint32_t ret = drm_start_playback();
+    if (ret != DRM_WV_MOD_SUCCESS) {
+        ALOGE("drm_start_playback failed: (0x%x)", ret);
+    }
+
     return OMXVideoDecoderBase::ProcessorStart();
 }
 
