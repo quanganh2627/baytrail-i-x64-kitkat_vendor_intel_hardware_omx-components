@@ -374,11 +374,6 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorDeinit(void)
     destroyDecoder();
 
     unsigned int i = 0;
-   
-    for (i = 0; i < MAX_NATIVE_BUFFER_COUNT; i++) {
-        delete extMIDs[i]->m_surface;
-        free(extMIDs[i]);
-    }
 
     if (mWorkingMode == GRAPHICBUFFER_MODE) {
         for (i = 0; i < mOMXBufferHeaderTypePtrNum; i++) {
@@ -398,6 +393,11 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorDeinit(void)
                 extMIDs[i]->m_usrAddr = NULL;
             }
         }
+    }
+
+    for (i = 0; i < MAX_NATIVE_BUFFER_COUNT; i++) {
+        delete extMIDs[i]->m_surface;
+        free(extMIDs[i]);
     }
 
     return OMXComponentCodecBase::ProcessorDeinit();
