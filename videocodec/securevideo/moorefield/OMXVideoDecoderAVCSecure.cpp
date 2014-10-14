@@ -196,10 +196,22 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ProcessorProcess(
     OMX_BUFFERHEADERTYPE *pInput = *pBuffers[INPORT_INDEX];
 
     ProtectedDataBuffer *dataBuffer = (ProtectedDataBuffer *)pInput->pBuffer;
+    // Check that we are dealing with the right buffer
     if (dataBuffer->magic != PROTECTED_DATA_BUFFER_MAGIC)
     {
-        ALOGE("%s: protected data buffer pointer %p doesn't have the right magic", __FUNCTION__, dataBuffer) ;
-        return OMX_ErrorBadParameter ;
+        if (pInput->nFlags & OMX_BUFFERFLAG_CODECCONFIG)
+        {
+            // Processing codec data, which is not in ProtectedDataBuffer format
+            ALOGV("%s: received AVC codec data (%lu bytes).", __FUNCTION__, pInput->nFilledLen);
+            DumpBuffer2("OMX: AVC codec data: ", pInput->pBuffer, pInput->nFilledLen);
+            return OMX_ErrorNone ;
+        }
+        else
+        {
+            // Processing non-codec data, but this buffer is not in ProtectedDataBuffer format
+            ALOGE("%s: protected data buffer pointer %p doesn't have the right magic", __FUNCTION__, dataBuffer) ;
+            return OMX_ErrorBadParameter ;
+        }
     }
 
     if((dataBuffer->drmScheme == DRM_SCHEME_WV_CLASSIC) && (!mKeepAliveTimer)){
@@ -731,14 +743,14 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
         if (buffer->nFlags & OMX_BUFFERFLAG_CODECCONFIG)
         {
             // Processing codec data, which is not in ProtectedDataBuffer format
-            ALOGV("%s: received AVC codec data (%lu bytes).", __FUNCTION__, buffer->nFilledLen);
+            ALOGI("%s: received AVC codec data (%lu bytes).", __FUNCTION__, buffer->nFilledLen);
             DumpBuffer2("OMX: AVC codec data: ", buffer->pBuffer, buffer->nFilledLen) ;
             return OMX_ErrorNone ;
         }
         else
         {
             // Processing non-codec data, but this buffer is not in ProtectedDataBuffer format
-            ALOGE("%s: protected data buffer pointer %p doesn't have the right magic", __FUNCTION__, dataBuffer) ;
+            ALOGE("%s: protected data buffer pointer %p doesn't have the right magic", __FUNCTION__, dataBuffer);
             return OMX_ErrorBadParameter ;
         }
     }
