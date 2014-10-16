@@ -78,6 +78,7 @@ protected:
     DECLARE_HANDLER(OMXVideoDecoderBase, NativeBufferUsage);
     DECLARE_HANDLER(OMXVideoDecoderBase, NativeBuffer);
     DECLARE_HANDLER(OMXVideoDecoderBase, NativeBufferMode);
+    DECLARE_HANDLER(OMXVideoDecoderBase, StoreMetaDataMode);
     DECLARE_HANDLER(OMXVideoDecoderBase, DecoderRotation);
     DECLARE_HANDLER(OMXVideoDecoderBase, DecoderOutputCrop);
 #ifdef TARGET_HAS_VPP
@@ -120,14 +121,28 @@ protected:
         GRAPHICBUFFER_MODE,
         RAWDATA_MODE,
     };
+    enum AdaptivePlaybackMode {
+        METADATA_MODE,
+        LEGACY_MODE,
+    };
+
     WorkingMode mWorkingMode;
+    AdaptivePlaybackMode mAPMode;
     bool mErrorReportEnabled;
+
+    uint32_t mMetaDataBuffersNum;
+    bool mFormatChanged;
 
     OMX_VIDEO_ERROR_BUFFER mErrorBuffers[MAX_GRAPHIC_BUFFER_NUM];
 
     GraphicBufferParam mGraphicBufferParam;
     uint32_t mOMXBufferHeaderTypePtrNum;
     OMX_BUFFERHEADERTYPE *mOMXBufferHeaderTypePtrArray[MAX_GRAPHIC_BUFFER_NUM];
+
+    static inline uint32_t align_to(uint32_t arg, uint32_t align) {
+        return ((arg + (align - 1)) & (~(align - 1)));
+    }
+    uint32_t getStride(uint32_t format, uint32_t width);
 };
 
 #endif /* OMX_VIDEO_DECODER_BASE_H_ */
