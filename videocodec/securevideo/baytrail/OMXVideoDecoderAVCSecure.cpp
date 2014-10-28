@@ -502,6 +502,7 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
 	    update_config_nalu(parsedFrame->nalu_data, &(parsedFrame->nalu_data_size));
 	}
 	memcpy(parsedFrame->pavp_info.iv, secBuffer->iv, 16);
+        parsedFrame->pavp_info.app_id = mPAVPAppID;
 
 	ret = ConstructFrameInfo(secBuffer->base + secBuffer->partitions.dest.offset, buffer->nFilledLen,
 	    &(parsedFrame->pavp_info), parsedFrame->nalu_data, parsedFrame->nalu_data_size,
