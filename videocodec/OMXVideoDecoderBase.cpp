@@ -37,6 +37,7 @@ OMXVideoDecoderBase::OMXVideoDecoderBase()
       mFormatChanged(false) {
       memset(&mGraphicBufferParam, 0, sizeof(mGraphicBufferParam));
       memset(&mErrorBuffers, 0, sizeof(mErrorBuffers));
+      memset(&pNativeHandleList, 0, sizeof(pNativeHandleList));
 }
 
 OMXVideoDecoderBase::~OMXVideoDecoderBase() {
@@ -867,7 +868,8 @@ OMX_ERRORTYPE OMXVideoDecoderBase::BuildHandlerList(void) {
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtUseNativeBuffer), GetNativeBuffer, SetNativeBuffer);
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtEnableNativeBuffer), GetNativeBufferMode, SetNativeBufferMode);
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtRotationDegrees), GetDecoderRotation, SetDecoderRotation);
-#ifdef TARGET_HAS_VPP
+    AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtDecoderBufferHandle), GetDecoderBufferHandle, SetDecoderBufferHandle);
+#ifdef TARGET_HAS_ISV
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtVppBufferNum), GetDecoderVppBufferNum, SetDecoderVppBufferNum);
 #endif
     AddHandler(OMX_IndexConfigCommonOutputCrop, GetDecoderOutputCrop, SetDecoderOutputCrop);
@@ -920,6 +922,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBufferUsageSpecific(OMX_PTR pStructu
 }
 
 OMX_ERRORTYPE OMXVideoDecoderBase::GetNativeBufferUsage(OMX_PTR pStructure) {
+
     return this->GetNativeBufferUsageSpecific(pStructure);
 }
 OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBufferUsage(OMX_PTR pStructure) {
@@ -942,6 +945,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetNativeBuffer(OMX_PTR pStructure) {
     if (mOMXBufferHeaderTypePtrNum > MAX_GRAPHIC_BUFFER_NUM)
         return OMX_ErrorOverflow;
 
+    pNativeHandleList[mOMXBufferHeaderTypePtrNum-1] = (OMX_U8*)param->nativeBuffer->handle;
     buf_hdr = &mOMXBufferHeaderTypePtrArray[mOMXBufferHeaderTypePtrNum-1];
 
     ret = this->ports[OUTPORT_INDEX]->UseBuffer(buf_hdr, OUTPORT_INDEX, param->pAppPrivate, sizeof(OMX_U8*),
@@ -1060,7 +1064,28 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetDecoderRotation(OMX_PTR pStructure) {
     }
 }
 
-#ifdef TARGET_HAS_VPP
+OMX_ERRORTYPE OMXVideoDecoderBase::GetDecoderBufferHandle(OMX_PTR pStructure) {
+    OMX_ERRORTYPE ret;
+    OMX_VIDEO_CONFIG_INTEL_DECODER_BUFFER_HANDLE *p = (OMX_VIDEO_CONFIG_INTEL_DECODER_BUFFER_HANDLE *)pStructure;
+
+    CHECK_TYPE_HEADER(p);
+
+    if(p->nIndex > MAX_GRAPHIC_BUFFER_NUM) {
+        ALOGE("The buffer index exceed the max allowed buffer number!");
+        return OMX_ErrorBadParameter;
+    }
+
+    p->pNativeHandle = pNativeHandleList[p->nIndex];
+    ALOGI("index = %d, pNativeHandle = 0x%08x", p->nIndex, p->pNativeHandle);
+
+    return OMX_ErrorNone;
+}
+
+OMX_ERRORTYPE OMXVideoDecoderBase::SetDecoderBufferHandle(OMX_PTR pStructure) {
+    return OMX_ErrorBadParameter;
+}
+
+#ifdef TARGET_HAS_ISV
 OMX_ERRORTYPE OMXVideoDecoderBase::GetDecoderVppBufferNum(OMX_PTR pStructure) {
     return OMX_ErrorBadParameter;
 }

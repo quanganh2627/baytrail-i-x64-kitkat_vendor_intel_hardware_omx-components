@@ -80,6 +80,7 @@ protected:
     DECLARE_HANDLER(OMXVideoDecoderBase, NativeBufferMode);
     DECLARE_HANDLER(OMXVideoDecoderBase, StoreMetaDataMode);
     DECLARE_HANDLER(OMXVideoDecoderBase, DecoderRotation);
+    DECLARE_HANDLER(OMXVideoDecoderBase, DecoderBufferHandle);
     DECLARE_HANDLER(OMXVideoDecoderBase, DecoderOutputCrop);
 #ifdef TARGET_HAS_VPP
     DECLARE_HANDLER(OMXVideoDecoderBase, DecoderVppBufferNum);
@@ -134,6 +135,7 @@ protected:
     bool mFormatChanged;
 
     OMX_VIDEO_ERROR_BUFFER mErrorBuffers[MAX_GRAPHIC_BUFFER_NUM];
+    OMX_U8* pNativeHandleList[MAX_GRAPHIC_BUFFER_NUM];
 
     GraphicBufferParam mGraphicBufferParam;
     uint32_t mOMXBufferHeaderTypePtrNum;
