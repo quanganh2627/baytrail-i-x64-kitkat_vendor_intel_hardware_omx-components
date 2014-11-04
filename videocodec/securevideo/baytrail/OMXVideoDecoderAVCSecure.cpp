@@ -386,7 +386,6 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::ModularProcessVideoFrame(SECVideoBuffer 
         *parsed_data_size = output.parsed_data_size;
         memcpy(secBuffer->iv, output.iv, 16);
    }
-   secBuffer->pes_packet_count = 0;
    return ret;
 }
 
