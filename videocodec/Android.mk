@@ -424,7 +424,10 @@ LOCAL_SHARED_LIBRARIES += libsepdrm
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/libsepdrm
 
-LOCAL_SRC_FILES += securevideo/ctp/OMXVideoDecoderAVCSecure.cpp
+LOCAL_SRC_FILES += securevideo/ctp/OMXVideoDecoderAVCSecure.cpp \
+                   securevideo/ctp/OMXImplWVClassic.cpp \
+                   securevideo/ctp/OMXImplWVModular.cpp \
+                   securevideo/ctp/DisplayIEDControl.cpp
 
 LOCAL_CFLAGS += -DVED_TILING
 

@@ -19,6 +19,9 @@
 
 
 #include "OMXVideoDecoderBase.h"
+#include "OMXImplWVClassic.h"
+#include "OMXImplWVModular.h"
+#include "DisplayIEDControl.h"
 
 class OMXVideoDecoderAVCSecure : public OMXVideoDecoderBase {
 public:
@@ -33,7 +36,6 @@ protected:
     virtual OMX_ERRORTYPE ProcessorStop(void);
     virtual OMX_ERRORTYPE ProcessorPause(void);
     virtual OMX_ERRORTYPE ProcessorResume(void);
-    virtual OMX_ERRORTYPE ProcessorFlush(OMX_U32 portIndex);
     virtual OMX_ERRORTYPE ProcessorProcess(
             OMX_BUFFERHEADERTYPE ***pBuffers,
             buffer_retain_t *retains,
@@ -41,9 +43,9 @@ protected:
 
    virtual OMX_ERRORTYPE PrepareConfigBuffer(VideoConfigBuffer *p);
    virtual OMX_ERRORTYPE PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE *buffer, buffer_retain_t *retain, VideoDecodeBuffer *p);
+   virtual OMX_ERRORTYPE SetMaxOutputBufferCount(OMX_PARAM_PORTDEFINITIONTYPE *p);    
 
    virtual OMX_ERRORTYPE BuildHandlerList(void);
-   virtual OMX_ERRORTYPE SetMaxOutputBufferCount(OMX_PARAM_PORTDEFINITIONTYPE *p);
    DECLARE_HANDLER(OMXVideoDecoderAVCSecure, ParamVideoAvc);
    DECLARE_HANDLER(OMXVideoDecoderAVCSecure, ParamVideoAVCProfileLevel);
 
@@ -52,9 +54,6 @@ private:
     static void MemFreeIMR(OMX_U8 *pBuffer, OMX_PTR pUserData);
     OMX_U8* MemAllocIMR(OMX_U32 nSizeBytes);
     void  MemFreeIMR(OMX_U8 *pBuffer);
-    static void KeepAliveTimerCallback(sigval v);
-    void KeepAliveTimerCallback();
-    bool EnableIEDSession(bool enable);
 
 private:
     enum {
@@ -78,10 +77,14 @@ private:
         uint8_t *owner;  // pointer to OMX buffer that owns this slot
     } mIMRSlot[INPORT_ACTUAL_BUFFER_COUNT];
 
-    timer_t mKeepAliveTimer;
-
     bool mSessionPaused;
-    int mDrmDevFd;
+    
+    DisplayIEDControl mIEDControl ;
+
+    OMXImplBase* mImplDRM ;
+    OMXImplWVClassic mWVClassic ;
+    OMXImplWVModular mWVModular ;
 };
+// End of OMXVideoDecoderAVCSecure
 
 #endif /* OMX_VIDEO_DECODER_AVC_SECURE_H_ */
