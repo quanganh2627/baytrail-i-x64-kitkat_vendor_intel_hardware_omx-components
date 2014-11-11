@@ -15,7 +15,7 @@
 */
 
 
-#define LOG_NDEBUG 0
+//#define LOG_NDEBUG 0
 #define LOG_TAG "OMXVideoDecoderAVCSecure"
 #include <utils/Log.h>
 
@@ -285,6 +285,7 @@ void DumpVideoFrameInfo(frame_info_t* fInfo)
 #define DumpBuffer2(...)
 #define DumpNaluHeaderBuffer(...)
 #define DumpProtectedDataBuffer(...)
+#define DumpVideoFrameInfo(...)
 
 #define DUMP_EOL
 
