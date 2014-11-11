@@ -47,23 +47,24 @@ typedef unsigned int Display;
 
 // Make it global to be accessed by callback realloc func
 #define MAX_NATIVE_BUFFER_COUNT 64
-vaapiMemId* extMIDs[MAX_NATIVE_BUFFER_COUNT];
-int extUtilBufferCount;
-int extMappedNativeBufferCount;
-unsigned int extNativeBufferSize;
-
-// These two strides are passed into libvpx to indicate the external buffer size
-// in case that video demension is smaller than these, libvpx inside should
-// ajust the start point of address of decoded y/v/u component.
-// This is especially for adaptive playback case. External buffer is always allocated
-// (or mapped from vaSurface) to a pre-set max size.
-int extActualBufferStride;
-int extActualBufferHeightStride;
 
 class OMXVideoDecoderVP9HWR : public OMXVideoDecoderBase {
 public:
     OMXVideoDecoderVP9HWR();
     virtual ~OMXVideoDecoderVP9HWR();
+
+    vaapiMemId* extMIDs[MAX_NATIVE_BUFFER_COUNT];
+    int extUtilBufferCount;
+    int extMappedNativeBufferCount;
+    unsigned int extNativeBufferSize;
+
+    // These two strides are passed into libvpx to indicate the external buffer size
+    // in case that video demension is smaller than these, libvpx inside should
+    // ajust the start point of address of decoded y/v/u component.
+    // This is especially for adaptive playback case. External buffer is always allocated
+    // (or mapped from vaSurface) to a pre-set max size.
+    int extActualBufferStride;
+    int extActualBufferHeightStride;
 
 protected:
     virtual OMX_ERRORTYPE InitInputPortFormatSpecific(OMX_PARAM_PORTDEFINITIONTYPE *paramPortDefinitionInput);
@@ -130,6 +131,7 @@ private:
 
     Display* mDisplay;
     VADisplay mVADisplay;
+
 };
 
 #endif /* OMX_VIDEO_DECODER_VP9HWR_H_ */

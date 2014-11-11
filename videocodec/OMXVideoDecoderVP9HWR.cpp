@@ -122,32 +122,32 @@ int getVP9FrameBuffer(void *user_priv,
                           unsigned int new_size,
                           vpx_codec_frame_buffer_t *fb)
 {
-    (void)user_priv;
-    if (fb == NULL) {
+    OMXVideoDecoderVP9HWR *ph = (OMXVideoDecoderVP9HWR *)user_priv;
+    if (fb == NULL || ph == NULL) {
         return -1; 
     }
 
     // TODO: Adaptive playback case needs to reconsider
-    if (extNativeBufferSize < new_size) {
+    if (ph->extNativeBufferSize < new_size) {
         LOGE("Provided frame buffer size < requesting min size.");
         return -1;
     }
 
     int i;
-    for (i = 0; i < extMappedNativeBufferCount; i++ ) {
-        if ((extMIDs[i]->m_render_done == true) &&
-            (extMIDs[i]->m_released == true)) {
-            fb->data = extMIDs[i]->m_usrAddr;
-            fb->size = extNativeBufferSize;
-            fb->fb_stride = extActualBufferStride;
-            fb->fb_height_stride = extActualBufferHeightStride;
+    for (i = 0; i < ph->extMappedNativeBufferCount; i++ ) {
+        if ((ph->extMIDs[i]->m_render_done == true) &&
+            (ph->extMIDs[i]->m_released == true)) {
+            fb->data = ph->extMIDs[i]->m_usrAddr;
+            fb->size = ph->extNativeBufferSize;
+            fb->fb_stride = ph->extActualBufferStride;
+            fb->fb_height_stride = ph->extActualBufferHeightStride;
             fb->fb_index = i;
-            extMIDs[i]->m_released = false;
+            ph->extMIDs[i]->m_released = false;
             break;
         }
     }
 
-    if (i == extMappedNativeBufferCount) {
+    if (i == ph->extMappedNativeBufferCount) {
         LOGE("No available frame buffer in pool.");
         return -1;
     }
@@ -158,19 +158,20 @@ int getVP9FrameBuffer(void *user_priv,
 // not used anymore.
 int releaseVP9FrameBuffer(void *user_priv, vpx_codec_frame_buffer_t *fb)
 {
-    if (fb == NULL) {
+    OMXVideoDecoderVP9HWR *ph = (OMXVideoDecoderVP9HWR *)user_priv;
+    if (fb == NULL || ph == NULL) {
         return -1; 
     }
 
     int i;
-    for (i = 0; i < extMappedNativeBufferCount; i++ ) {
-        if (fb->data == extMIDs[i]->m_usrAddr) {
-            extMIDs[i]->m_released = true;
+    for (i = 0; i < ph->extMappedNativeBufferCount; i++ ) {
+        if (fb->data == ph->extMIDs[i]->m_usrAddr) {
+            ph->extMIDs[i]->m_released = true;
             break;
         }
     }
 
-    if (i == extMappedNativeBufferCount) {
+    if (i == ph->extMappedNativeBufferCount) {
         LOGE("Not found matching frame buffer in pool, libvpx's wrong?");
         return -1;
     }
@@ -198,7 +199,7 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::initDecoder()
     if (vpx_codec_set_frame_buffer_functions((vpx_codec_ctx_t *)mCtx,
                                     getVP9FrameBuffer,
                                     releaseVP9FrameBuffer,
-                                    NULL)) {                       
+                                    (void*)this)) {
       LOGE("Failed to configure external frame buffers");    
       return OMX_ErrorNotReady;
     }
@@ -368,9 +369,6 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorInit(void)
 
 OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorDeinit(void)
 {
-    mOMXBufferHeaderTypePtrNum = 0;
-    memset(&mGraphicBufferParam, 0, sizeof(mGraphicBufferParam));
-
     destroyDecoder();
 
     unsigned int i = 0;
@@ -379,10 +377,6 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorDeinit(void)
         for (i = 0; i < mOMXBufferHeaderTypePtrNum; i++) {
             if (extMIDs[i]->m_surface != NULL) {
                 vaDestroySurfaces(mVADisplay, extMIDs[i]->m_surface, 1);
-            }
-            if (extMIDs[i]->m_usrAddr != NULL) {
-                free(extMIDs[i]->m_usrAddr);
-                extMIDs[i]->m_usrAddr = NULL;
             }
         }
 
@@ -395,6 +389,8 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorDeinit(void)
         }
     }
 
+    mOMXBufferHeaderTypePtrNum = 0;
+    memset(&mGraphicBufferParam, 0, sizeof(mGraphicBufferParam));
     for (i = 0; i < MAX_NATIVE_BUFFER_COUNT; i++) {
         delete extMIDs[i]->m_surface;
         free(extMIDs[i]);
