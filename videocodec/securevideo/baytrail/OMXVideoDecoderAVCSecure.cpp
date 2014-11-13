@@ -467,7 +467,8 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
 
 	if(!mpLibInstance && secBuffer->pLibInstance) {
             mpLibInstance = secBuffer->pLibInstance;
-            if( CreatePavpSession() == OMX_ErrorNone) {
+            ret = CreatePavpSession();
+            if( ret == OMX_ErrorNone) {
                 ret = WvSetTranscriptKey();
             }
 	}
@@ -481,7 +482,8 @@ OMX_ERRORTYPE OMXVideoDecoderAVCSecure::PrepareDecodeBuffer(OMX_BUFFERHEADERTYPE
 
 	if(!mpLibInstance && secBuffer->pLibInstance) {
             mpLibInstance = secBuffer->pLibInstance;
-            if( CreatePavpSession() == OMX_ErrorNone) {
+            ret = CreatePavpSession();
+            if( ret == OMX_ErrorNone) {
                 ret = MdrmInjectKey(secBuffer->mdrm_info.session_id, secBuffer->mdrm_info.key_id);
             }
         }
