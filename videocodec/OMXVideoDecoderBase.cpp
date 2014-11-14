@@ -28,7 +28,7 @@ OMXVideoDecoderBase::OMXVideoDecoderBase()
       mNativeBufferCount(OUTPORT_NATIVE_BUFFER_COUNT),
       mOMXBufferHeaderTypePtrNum(0),
       mRotationDegrees(0),
-#ifdef TARGET_HAS_VPP
+#ifdef TARGET_HAS_ISV
       mVppBufferNum(0),
 #endif
       mWorkingMode(RAWDATA_MODE),
@@ -222,7 +222,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::ProcessorDeinit(void) {
     mOMXBufferHeaderTypePtrNum = 0;
     memset(&mGraphicBufferParam, 0, sizeof(mGraphicBufferParam));
     mRotationDegrees = 0;
-#ifdef TARGET_HAS_VPP
+#ifdef TARGET_HAS_ISV
     mVppBufferNum = 0;
 #endif
     return OMXComponentCodecBase::ProcessorDeinit();
@@ -537,7 +537,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::PrepareConfigBuffer(VideoConfigBuffer *p) {
     }
 
     p->rotationDegrees = mRotationDegrees;
-#ifdef TARGET_HAS_VPP
+#ifdef TARGET_HAS_ISV
     p->vppBufferNum = mVppBufferNum;
 #endif
     p->width = paramPortDefinitionInput->format.video.nFrameWidth;
@@ -695,7 +695,11 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
     bool isVP8 = false;
 
     if (mAPMode == METADATA_MODE && mWorkingMode == GRAPHICBUFFER_MODE) {
+#ifdef TARGET_HAS_ISV
+        if (paramPortDefinitionOutput.nBufferCountActual - mVppBufferNum < formatInfo->actualBufferNeeded) {
+#else
         if (paramPortDefinitionOutput.nBufferCountActual < formatInfo->actualBufferNeeded) {
+#endif
             paramPortDefinitionOutput.nBufferCountActual = mNativeBufferCount = formatInfo->actualBufferNeeded;
             paramPortDefinitionOutput.nBufferCountMin = formatInfo->actualBufferNeeded - 4;
         }
@@ -731,8 +735,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
         return OMX_ErrorNone;
     }
 
-#ifdef TARGET_HAS_VPP
-    LOGI("============== mVppBufferNum = %d\n", mVppBufferNum);
+#ifdef TARGET_HAS_ISV
     if (paramPortDefinitionOutput.nBufferCountActual - mVppBufferNum < formatInfo->actualBufferNeeded) {
 #else
     if (paramPortDefinitionOutput.nBufferCountActual < formatInfo->actualBufferNeeded) {
@@ -867,7 +870,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::BuildHandlerList(void) {
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtUseNativeBuffer), GetNativeBuffer, SetNativeBuffer);
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtEnableNativeBuffer), GetNativeBufferMode, SetNativeBufferMode);
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtRotationDegrees), GetDecoderRotation, SetDecoderRotation);
-#ifdef TARGET_HAS_VPP
+#ifdef TARGET_HAS_ISV
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtVppBufferNum), GetDecoderVppBufferNum, SetDecoderVppBufferNum);
 #endif
     AddHandler(OMX_IndexConfigCommonOutputCrop, GetDecoderOutputCrop, SetDecoderOutputCrop);
@@ -1060,7 +1063,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetDecoderRotation(OMX_PTR pStructure) {
     }
 }
 
-#ifdef TARGET_HAS_VPP
+#ifdef TARGET_HAS_ISV
 OMX_ERRORTYPE OMXVideoDecoderBase::GetDecoderVppBufferNum(OMX_PTR pStructure) {
     return OMX_ErrorBadParameter;
 }
