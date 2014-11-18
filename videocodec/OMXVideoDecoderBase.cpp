@@ -494,7 +494,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::PrepareConfigBuffer(VideoConfigBuffer *p) {
             mGraphicBufferParam.graphicBufferColorFormat = def_output->format.video.eColorFormat;
             mGraphicBufferParam.graphicBufferStride = getStride(def_output->format.video.eColorFormat, def_output->format.video.nFrameWidth);
             mGraphicBufferParam.graphicBufferWidth = def_output->format.video.nFrameWidth;
-            mGraphicBufferParam.graphicBufferHeight = def_output->format.video.nFrameHeight;
+            mGraphicBufferParam.graphicBufferHeight = (def_output->format.video.nFrameHeight + 0xf) & ~0xf;
 
             p->surfaceNumber = mMetaDataBuffersNum;
             for (int i = 0; i < MAX_GRAPHIC_BUFFER_NUM; i++) {
@@ -722,16 +722,15 @@ OMX_ERRORTYPE OMXVideoDecoderBase::HandleFormatChange(void) {
         memset(&mGraphicBufferParam, 0, sizeof(mGraphicBufferParam));
         mMetaDataBuffersNum = 0;
 
-        mFormatChanged = false;
-
         this->ports[INPORT_INDEX]->SetPortDefinition(&paramPortDefinitionInput, true);
         this->ports[OUTPORT_INDEX]->SetPortDefinition(&paramPortDefinitionOutput, true);
 
         mVideoDecoder->freeSurfaceBuffers();
 
         ProcessorFlush(INPORT_INDEX);
-
         this->ports[OUTPORT_INDEX]->ReportPortSettingsChanged();
+
+        mFormatChanged = false;
         return OMX_ErrorNone;
     }
 
@@ -876,7 +875,9 @@ OMX_ERRORTYPE OMXVideoDecoderBase::BuildHandlerList(void) {
     AddHandler(OMX_IndexConfigCommonOutputCrop, GetDecoderOutputCrop, SetDecoderOutputCrop);
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtEnableErrorReport), GetErrorReportMode, SetErrorReportMode);
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtOutputErrorBuffers), GetErrorBuffers, SetErrorBuffers);
+#ifdef USE_META_DATA
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexStoreMetaDataInBuffers), GetStoreMetaDataMode, SetStoreMetaDataMode);
+#endif
 
     return OMX_ErrorNone;
 }
@@ -988,7 +989,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::SetStoreMetaDataMode(OMX_PTR pStructure) {
 
     if (!param->bStoreMetaData) {
         mAPMode = LEGACY_MODE;
-        return OMX_ErrorNone;
+        return OMX_ErrorBadParameter;
     }
     mAPMode = METADATA_MODE;
     ALOGI("We are in meta data mode!!!");

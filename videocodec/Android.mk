@@ -59,6 +59,7 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),moorefield)
 LOCAL_CFLAGS += -DVED_TILING
+LOCAL_CFLAGS += -DUSE_META_DATA
 endif
 
 ifeq ($(TARGET_VPP_USE_GEN),true)
@@ -67,6 +68,7 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
 LOCAL_CFLAGS += -DUSE_GEN_HW
+LOCAL_CFLAGS += -DUSE_META_DATA
 endif
 
 include $(BUILD_SHARED_LIBRARY)
@@ -120,6 +122,7 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),moorefield)
 LOCAL_CFLAGS += -DVED_TILING
+LOCAL_CFLAGS += -DUSE_META_DATA
 endif
 
 PLATFORM_USE_GEN_HW := \
@@ -136,6 +139,7 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
 LOCAL_CFLAGS += -DUSE_X_TILE
+LOCAL_CFLAGS += -DUSE_META_DATA
 endif
 
 include $(BUILD_SHARED_LIBRARY)
@@ -248,10 +252,12 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),moorefield)
 LOCAL_CFLAGS += -DVED_TILING
+LOCAL_CFLAGS += -DUSE_META_DATA
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
 LOCAL_CFLAGS += -DUSE_GEN_HW
+LOCAL_CFLAGS += -DUSE_META_DATA
 endif
 
 ifeq ($(USE_SW_MPEG4),true)
@@ -310,10 +316,12 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),moorefield)
 LOCAL_CFLAGS += -DVED_TILING
+LOCAL_CFLAGS += -DUSE_META_DATA
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
 LOCAL_CFLAGS += -DUSE_GEN_HW
+LOCAL_CFLAGS += -DUSE_META_DATA
 endif
 
 ifeq ($(USE_SW_MPEG4),true)
@@ -372,6 +380,7 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),moorefield)
 LOCAL_CFLAGS += -DVED_TILING
+LOCAL_CFLAGS += -DUSE_META_DATA
 endif
 
 ifeq ($(TARGET_VPP_USE_GEN),true)
@@ -464,6 +473,7 @@ LOCAL_C_INCLUDES += $(TOP)/vendor/intel/hardware/cc54/libsepdrm/libdrm/common/in
 LOCAL_SRC_FILES += securevideo/moorefield/OMXVideoDecoderAVCSecure.cpp
 
 LOCAL_CFLAGS += -DVED_TILING
+LOCAL_CFLAGS += -DUSE_META_DATA
 
 else ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
 #Secure AVC decoder for Baytrail (uses PAVP)
@@ -471,6 +481,7 @@ LOCAL_C_INCLUDES += $(TOP)/vendor/intel/hardware/PRIVATE/ufo/inc/libpavp
 
 LOCAL_SHARED_LIBRARIES += libpavp
 LOCAL_LDLIBS += -ldl
+LOCAL_CFLAGS += -DUSE_META_DATA
 
 LOCAL_SRC_FILES += securevideo/baytrail/OMXVideoDecoderAVCSecure.cpp
 
