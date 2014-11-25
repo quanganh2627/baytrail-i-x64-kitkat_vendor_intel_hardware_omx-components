@@ -9,7 +9,7 @@ else ifeq ($(ARCH_ARM_HAVE_ARMV7A),true)
   libvpx_asm := .asm.s
 endif
 
-ifeq ($(TARGET_ARCH),x86)
+ifeq ($(TARGET_ARCH),$(filter $(TARGET_ARCH), x86 x86_64))
   libvpx_target := x86
   libvpx_asm := .asm
 endif
