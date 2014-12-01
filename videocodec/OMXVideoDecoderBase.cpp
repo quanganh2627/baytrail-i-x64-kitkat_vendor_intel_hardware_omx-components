@@ -873,7 +873,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::BuildHandlerList(void) {
     AddHandler(OMX_IndexConfigCommonOutputCrop, GetDecoderOutputCrop, SetDecoderOutputCrop);
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtEnableErrorReport), GetErrorReportMode, SetErrorReportMode);
     AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexExtOutputErrorBuffers), GetErrorBuffers, SetErrorBuffers);
-    AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexStoreMetaDataInBuffers), GetStoreMetaDataMode, SetStoreMetaDataMode);
+    //AddHandler(static_cast<OMX_INDEXTYPE>(OMX_IndexStoreMetaDataInBuffers), GetStoreMetaDataMode, SetStoreMetaDataMode);
 
     return OMX_ErrorNone;
 }
