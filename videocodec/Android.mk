@@ -255,7 +255,7 @@ LOCAL_CFLAGS += -DUSE_GEN_HW
 endif
 
 ifeq ($(USE_SW_MPEG4),true)
-LOCAL_CFLAGS += -DUSE_SW_MPEG4
+LOCAL_CFLAGS += -DUSE_SW_MPEG4 -DBUF_HEIGHT_ALIGN32
 endif
 
 include $(BUILD_SHARED_LIBRARY)
@@ -696,6 +696,7 @@ LOCAL_MODULE := libOMXVideoEncoderVP8
 LOCAL_MULTILIB := 32
 include $(BUILD_SHARED_LIBRARY)
 
+ifeq ($(filter $(TARGET_BOARD_PLATFORM),cherrytrail gmin),)
 ifeq ($(TARGET_HAS_MULTIPLE_DISPLAY),true)
 # VPP
 include $(CLEAR_VARS)
@@ -744,6 +745,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoPP
 LOCAL_MULTILIB := 32
 include $(BUILD_SHARED_LIBRARY)
+endif
 endif
 
 endif
