@@ -26,6 +26,7 @@
 #include <HardwareAPI.h>
 #include <hardware/hardware.h>
 #include <hardware/gralloc.h>
+#include <ufo/gralloc.h>
 
 #include <emmintrin.h>
 
@@ -58,7 +59,7 @@ static int GetCPUCoreCount()
     if (cpuCoreCount < 1) {
         ALOGW("Get CPU Core Count error.");
         cpuCoreCount = 1;
-    } 
+    }
     ALOGV("Number of CPU cores: %d", cpuCoreCount);
     return cpuCoreCount;
 }
@@ -80,26 +81,6 @@ OMXVideoDecoderVP9HWR::OMXVideoDecoderVP9HWR()
     mDecodedImageHeight = 0;
     mDecodedImageNewWidth = 0;
     mDecodedImageNewHeight = 0;
-
-#ifdef DECODE_WITH_GRALLOC_BUFFER
-    // setup va
-    VAStatus vaStatus = VA_STATUS_SUCCESS;
-    mDisplay = new Display;
-    *mDisplay = ANDROID_DISPLAY_HANDLE;
-
-    mVADisplay = vaGetDisplay(mDisplay);
-    if (mVADisplay == NULL) {
-        LOGE("vaGetDisplay failed.");
-    }
-
-    int majorVersion, minorVersion;
-    vaStatus = vaInitialize(mVADisplay, &majorVersion, &minorVersion);
-    if (vaStatus != VA_STATUS_SUCCESS) {
-        LOGE("vaInitialize failed.");
-    } else {
-        LOGV("va majorVersion=%d, minorVersion=%d", majorVersion, minorVersion);
-    }
-#endif
 }
 
 OMXVideoDecoderVP9HWR::~OMXVideoDecoderVP9HWR()
@@ -107,11 +88,6 @@ OMXVideoDecoderVP9HWR::~OMXVideoDecoderVP9HWR()
     LOGV("OMXVideoDecoderVP9HWR is destructed.");
 
     unsigned int i = 0;
-
-    if (mVADisplay) {
-        vaTerminate(mVADisplay);
-        mVADisplay = NULL;
-    }
 }
 
 
@@ -124,7 +100,7 @@ int getVP9FrameBuffer(void *user_priv,
 {
     (void)user_priv;
     if (fb == NULL) {
-        return -1; 
+        return -1;
     }
 
     // TODO: Adaptive playback case needs to reconsider
@@ -159,7 +135,7 @@ int getVP9FrameBuffer(void *user_priv,
 int releaseVP9FrameBuffer(void *user_priv, vpx_codec_frame_buffer_t *fb)
 {
     if (fb == NULL) {
-        return -1; 
+        return -1;
     }
 
     int i;
@@ -174,19 +150,19 @@ int releaseVP9FrameBuffer(void *user_priv, vpx_codec_frame_buffer_t *fb)
         LOGE("Not found matching frame buffer in pool, libvpx's wrong?");
         return -1;
     }
-    return 0; 
+    return 0;
 }
 
 
 OMX_ERRORTYPE OMXVideoDecoderVP9HWR::initDecoder()
 {
-    mCtx = new vpx_codec_ctx_t;    
+    mCtx = new vpx_codec_ctx_t;
     vpx_codec_err_t vpx_err;
     vpx_codec_dec_cfg_t cfg;
     memset(&cfg, 0, sizeof(vpx_codec_dec_cfg_t));
     cfg.threads = GetCPUCoreCount();
     if ((vpx_err = vpx_codec_dec_init(
-                (vpx_codec_ctx_t *)mCtx,       
+                (vpx_codec_ctx_t *)mCtx,
                  &vpx_codec_vp9_dx_algo,
                  &cfg, 0))) {
         LOGE("on2 decoder failed to initialize. (%d)", vpx_err);
@@ -194,12 +170,12 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::initDecoder()
     }
 
     mNumFrameBuffer = OUTPORT_NATIVE_BUFFER_COUNT;
-        
+
     if (vpx_codec_set_frame_buffer_functions((vpx_codec_ctx_t *)mCtx,
                                     getVP9FrameBuffer,
                                     releaseVP9FrameBuffer,
-                                    NULL)) {                       
-      LOGE("Failed to configure external frame buffers");    
+                                    NULL)) {
+      LOGE("Failed to configure external frame buffers");
       return OMX_ErrorNotReady;
     }
 
@@ -233,9 +209,9 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorInit(void)
     unsigned int i = 0;
 
     for (i = 0; i < MAX_NATIVE_BUFFER_COUNT; i++) {
-        extMIDs[i] = (vaapiMemId*)malloc(sizeof(vaapiMemId));
+        extMIDs[i] = (hwrMemId*)malloc(sizeof(hwrMemId));
         extMIDs[i]->m_usrAddr = NULL;
-        extMIDs[i]->m_surface = new VASurfaceID;
+        //extMIDs[i]->m_surface = new VASurfaceID;
     }
 
     initDecoder();
@@ -283,6 +259,18 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorInit(void)
     extActualBufferStride = surfaceStride;
     extActualBufferHeightStride = surfaceHeight;
 
+    int err;
+    hw_module_t const* module = NULL;
+    struct gralloc_module_t *gralloc_module = NULL;
+
+    err = hw_get_module(GRALLOC_HARDWARE_MODULE_ID, &module);
+    if (err || !module) {
+        LOGE("Failed getting gralloc module");
+        return OMX_ErrorHardware;
+    }
+    gralloc_module = (struct gralloc_module_t *)module;
+    intel_ufo_buffer_details_t info;
+
     for (i = 0; i < mOMXBufferHeaderTypePtrNum; i++) {
         OMX_BUFFERHEADERTYPE *buf_hdr = mOMXBufferHeaderTypePtrArray[i];
 
@@ -290,76 +278,37 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorInit(void)
         extMIDs[i]->m_render_done = false;
         extMIDs[i]->m_released = true;
 
-
-        VAStatus va_res; 
-        unsigned int buffer;
-        VASurfaceAttrib attribs[2];                   
-        VASurfaceAttribExternalBuffers* surfExtBuf = new VASurfaceAttribExternalBuffers;
-        int32_t format = VA_RT_FORMAT_YUV420;
-
-        surfExtBuf->buffers= (unsigned long *)&buffer;
-        surfExtBuf->num_buffers = 1;
-        surfExtBuf->pixel_format = VA_FOURCC_NV12;
-        surfExtBuf->width = surfaceWidth;
-        surfExtBuf->height = surfaceHeight;
-        surfExtBuf->data_size = surfaceStride * surfaceHeight * 1.5;
-        surfExtBuf->num_planes = 2; 
-        surfExtBuf->pitches[0] = surfaceStride;
-        surfExtBuf->pitches[1] = surfaceStride;
-        surfExtBuf->pitches[2] = 0;
-        surfExtBuf->pitches[3] = 0;
-        surfExtBuf->offsets[0] = 0;
-        surfExtBuf->offsets[1] = surfaceStride * surfaceHeight;
-        surfExtBuf->offsets[2] = 0;
-        surfExtBuf->offsets[3] = 0;
-        surfExtBuf->flags = VA_SURFACE_ATTRIB_MEM_TYPE_ANDROID_GRALLOC;
-
-        surfExtBuf->buffers[0] = (unsigned int)buf_hdr->pBuffer;
-
-        attribs[0].type = (VASurfaceAttribType)VASurfaceAttribMemoryType;
-        attribs[0].flags = VA_SURFACE_ATTRIB_SETTABLE;
-        attribs[0].value.type = VAGenericValueTypeInteger;
-        attribs[0].value.value.i = VA_SURFACE_ATTRIB_MEM_TYPE_ANDROID_GRALLOC;
-
-        attribs[1].type = (VASurfaceAttribType)VASurfaceAttribExternalBufferDescriptor;
-        attribs[1].flags = VA_SURFACE_ATTRIB_SETTABLE;
-        attribs[1].value.type = VAGenericValueTypePointer;
-        attribs[1].value.value.p = (void *)surfExtBuf;
-
-        va_res = vaCreateSurfaces(mVADisplay,
-                                  format,
-                                  surfaceWidth,
-                                  surfaceHeight,
-                                  extMIDs[i]->m_surface,
-                                  1,
-                                  attribs,
-                                  2);
-
-        if (va_res != VA_STATUS_SUCCESS) {
-            LOGE("Failed to create vaSurface!");
-            return OMX_ErrorUndefined;
+        err = gralloc_module->perform(gralloc_module,
+            INTEL_UFO_GRALLOC_MODULE_PERFORM_GET_BO_INFO,
+            (buffer_handle_t)buf_hdr->pBuffer, &info);
+        if (err) {
+            LOGE("Failed getting BO[%d] hnd %x info: %d (%s)",
+                i, (buffer_handle_t)buf_hdr->pBuffer,
+                err, strerror(err));
+            return OMX_ErrorHardware;
         }
-
-        delete surfExtBuf;
-
-        VAImage image;
-        unsigned char* usrptr;
-
-        va_res = vaDeriveImage(mVADisplay, *(extMIDs[i]->m_surface), &image);
-        if (VA_STATUS_SUCCESS == va_res) {
-            va_res = vaMapBuffer(mVADisplay, image.buf, (void **) &usrptr);
-            if (VA_STATUS_SUCCESS == va_res) {
-                extMIDs[i]->m_usrAddr = usrptr;
-                vaUnmapBuffer(mVADisplay, image.buf);
-            }
-            vaDestroyImage(mVADisplay, image.image_id);
+        err = gralloc_module->lock(gralloc_module,
+            (buffer_handle_t)buf_hdr->pBuffer,
+            GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_OFTEN,
+            0, 0, info.pitch, info.allocHeight,
+            (void **) &extMIDs[i]->m_usrAddr);
+        if (err) {
+            LOGE("Failed locking BO[%d] hnd %x: %d (%s)\n",
+                i, buf_hdr->pBuffer,
+                err, strerror(err));
+            return OMX_ErrorHardware;
         }
+        LOGI("Mapped raw data with handle %x:", (buffer_handle_t)buf_hdr->pBuffer);
+
+        // debug information
+        gralloc_module->unlock(gralloc_module,
+            (buffer_handle_t)buf_hdr->pBuffer);
 
         // perform a cl flush here
         if (extMIDs[i]->m_usrAddr != NULL) {
             vp9CLflush((void*)extMIDs[i]->m_usrAddr, extNativeBufferSize);
         }
-        
+
         extMappedNativeBufferCount++;
     }
     return OMX_ErrorNone;
@@ -376,6 +325,7 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorDeinit(void)
     unsigned int i = 0;
 
     if (mWorkingMode == GRAPHICBUFFER_MODE) {
+#if 0
         for (i = 0; i < mOMXBufferHeaderTypePtrNum; i++) {
             if (extMIDs[i]->m_surface != NULL) {
                 vaDestroySurfaces(mVADisplay, extMIDs[i]->m_surface, 1);
@@ -385,7 +335,7 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorDeinit(void)
                 extMIDs[i]->m_usrAddr = NULL;
             }
         }
-
+#endif
     } else if (mWorkingMode == RAWDATA_MODE) {
         for (i = 0; i < OUTPORT_ACTUAL_BUFFER_COUNT; i++ ) {
             if (extMIDs[i]->m_usrAddr != NULL) {
@@ -396,7 +346,7 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorDeinit(void)
     }
 
     for (i = 0; i < MAX_NATIVE_BUFFER_COUNT; i++) {
-        delete extMIDs[i]->m_surface;
+        //delete extMIDs[i]->m_surface;
         free(extMIDs[i]);
     }
 
@@ -432,7 +382,7 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorPreFillBuffer(OMX_BUFFERHEADERTYPE
 OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorProcess(
         OMX_BUFFERHEADERTYPE ***pBuffers,
         buffer_retain_t *retains,
-        OMX_U32 numberBuffers) 
+        OMX_U32 numberBuffers)
 {
 
     OMX_ERRORTYPE ret;
@@ -447,7 +397,7 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorProcess(
 
     if (inBuffer->nFlags & OMX_BUFFERFLAG_CODECCONFIG) {
         LOGI("Buffer has OMX_BUFFERFLAG_CODECCONFIG flag.");
-    }   
+    }
 
     if (inBuffer->nFlags & OMX_BUFFERFLAG_DECODEONLY) {
         LOGW("Buffer has OMX_BUFFERFLAG_DECODEONLY flag.");
@@ -487,17 +437,17 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorProcess(
     bool outputEoS = ((*pBuffers[OUTPORT_INDEX])->nFlags & OMX_BUFFERFLAG_EOS);
     // if output port is not eos, retain the input buffer
     // until all the output buffers are drained.
-    if (inputEoS && !outputEoS) {      
+    if (inputEoS && !outputEoS) {
         retains[INPORT_INDEX] = BUFFER_RETAIN_GETAGAIN;
         // the input buffer is retained for draining purpose.
         // Set nFilledLen to 0 so buffer will not be decoded again.
-        (*pBuffers[INPORT_INDEX])->nFilledLen = 0;                                                                                           
-    }  
+        (*pBuffers[INPORT_INDEX])->nFilledLen = 0;
+    }
 
-    if (ret == OMX_ErrorNotReady) {    
+    if (ret == OMX_ErrorNotReady) {
         retains[OUTPORT_INDEX] = BUFFER_RETAIN_GETAGAIN;
         ret = OMX_ErrorNone;
-    }  
+    }
 
     return ret;
 }
@@ -510,7 +460,7 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::ProcessorReset(void)
 static int ALIGN(int x, int y)
 {
     // y must be a power of 2.
-    return (x + y - 1) & ~(y - 1); 
+    return (x + y - 1) & ~(y - 1);
 }
 
 OMX_ERRORTYPE OMXVideoDecoderVP9HWR::HandleFormatChange(void)
@@ -770,7 +720,7 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::GetDecoderOutputCropSpecific(OMX_PTR pStruc
         return OMX_ErrorUndefined;
     }
 
-    const OMX_PARAM_PORTDEFINITIONTYPE *paramPortDefinitionInput 
+    const OMX_PARAM_PORTDEFINITIONTYPE *paramPortDefinitionInput
                                       = this->ports[INPORT_INDEX]->GetPortDefinition();
 
     rectParams->nLeft = VPX_DECODE_BORDER;
@@ -797,8 +747,8 @@ OMX_ERRORTYPE OMXVideoDecoderVP9HWR::GetNativeBufferUsageSpecific(OMX_PTR pStruc
 OMX_ERRORTYPE OMXVideoDecoderVP9HWR::SetNativeBufferModeSpecific(OMX_PTR pStructure)
 {
     OMX_ERRORTYPE ret;
-    EnableAndroidNativeBuffersParams *param =
-        (EnableAndroidNativeBuffersParams*)pStructure;
+    android::EnableAndroidNativeBuffersParams *param =
+        (android::EnableAndroidNativeBuffersParams*)pStructure;
 
     CHECK_TYPE_HEADER(param);
     CHECK_PORT_INDEX_RANGE(param);

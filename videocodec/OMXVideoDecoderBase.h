@@ -24,7 +24,7 @@
 #include "VideoDecoderHost.h"
 
 #ifdef USE_GEN_HW
-#include "graphics.h"
+#include <ufo/graphics.h>
 #endif
 
 static const char* VA_VED_RAW_MIME_TYPE = "video/x-raw-vaved";

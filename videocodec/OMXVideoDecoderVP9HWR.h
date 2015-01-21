@@ -23,14 +23,12 @@
 #include "vpx/vpx_decoder.h"
 #include "vpx/vpx_codec.h"
 #include "vpx/vp8dx.h"
-#include <va/va.h>
-#include <va/va_android.h>
-#include <va/va_tpi.h>
 
 // VAAPI Allocator internal Mem ID
-typedef struct vaapiMemId             
+typedef struct hwrMemId
 {
-    VASurfaceID*       m_surface;
+	//buffer_handle_t    m_handle;
+    //VASurfaceID*       m_surface;
     //VAImage            m_image;
 
     unsigned int       m_key; //Gralloc handle from which this srf was created
@@ -128,8 +126,8 @@ private:
     int mDecodedImageNewWidth;
     int mDecodedImageNewHeight;
 
-    Display* mDisplay;
-    VADisplay mVADisplay;
+    //Display* mDisplay;
+    //VADisplay mVADisplay;
 };
 
 #endif /* OMX_VIDEO_DECODER_VP9HWR_H_ */

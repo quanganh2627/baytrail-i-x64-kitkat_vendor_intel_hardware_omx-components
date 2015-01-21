@@ -153,9 +153,6 @@ LOCAL_SHARED_LIBRARIES := \
     libwrs_omxil_common \
     libva_videodecoder \
     liblog \
-    libva \
-    libva-android \
-    libva-tpi \
     libhardware
 
 LOCAL_STATIC_LIBRARIES := \
@@ -172,10 +169,6 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, frameworks-native)/media/hardware \
     $(call include-path-for, frameworks-native)/media/openmax
 
-ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/ufo
-endif
-
 LOCAL_SRC_FILES := \
     OMXComponentCodecBase.cpp\
     OMXVideoDecoderBase.cpp\
@@ -186,14 +179,8 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderVP9HWR
 LOCAL_MULTILIB := 32
 
-ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
-LOCAL_CFLAGS += -DVED_TILING
-endif
-
-ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
 LOCAL_CFLAGS += -DUSE_GEN_HW
-endif
-
+LOCAL_CFLAGS += -DDECODE_WITH_GRALLOC_BUFFER
 include $(BUILD_SHARED_LIBRARY)
 # end VP9 SW decode and HW Render
 
