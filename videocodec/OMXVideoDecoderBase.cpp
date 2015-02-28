@@ -1070,7 +1070,7 @@ OMX_ERRORTYPE OMXVideoDecoderBase::GetDecoderBufferHandle(OMX_PTR pStructure) {
 
     CHECK_TYPE_HEADER(p);
 
-    if(p->nIndex > MAX_GRAPHIC_BUFFER_NUM) {
+    if(p->nIndex >= MAX_GRAPHIC_BUFFER_NUM) {
         ALOGE("The buffer index exceed the max allowed buffer number!");
         return OMX_ErrorBadParameter;
     }
