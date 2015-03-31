@@ -7,6 +7,8 @@ else
 LOCAL_C_FLAGS :=
 endif
 
+# OMXVideoDecoderAVC
+ifneq ($(ENABLE_IMG_GRAPHICS),)
 include $(CLEAR_VARS)
 
 ifeq ($(TARGET_HAS_VPP),true)
@@ -47,7 +49,6 @@ LOCAL_SRC_FILES := \
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderAVC
-LOCAL_MULTILIB := 32
 ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
 LOCAL_CFLAGS += -DBUF_HEIGHT_ALIGN32
@@ -70,8 +71,10 @@ LOCAL_CFLAGS += -DUSE_GEN_HW
 endif
 
 include $(BUILD_SHARED_LIBRARY)
+endif #OMXVideoDecoderAVC
 
-
+# OMXVideoDecoderVP8
+ifneq ($(ENABLE_IMG_GRAPHICS),)
 PLATFORM_SUPPORT_VP8 := \
     merrifield \
     morganfield \
@@ -112,7 +115,6 @@ LOCAL_SRC_FILES := \
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderVP8
-LOCAL_MULTILIB := 32
 
 ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
 LOCAL_CFLAGS += -DVED_TILING
@@ -140,8 +142,10 @@ endif
 
 include $(BUILD_SHARED_LIBRARY)
 endif
+endif # OMXVideoDecoderVP8
 
 # VP9 with SW decode and HW Render
+ifneq ($(ENABLE_IMG_GRAPHICS),)
 include $(CLEAR_VARS)
 
 ifeq ($(TARGET_HAS_VPP),true)
@@ -177,14 +181,13 @@ LOCAL_SRC_FILES := \
 LOCAL_LDFLAGS := -Wl,--no-warn-shared-textrel
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderVP9HWR
-LOCAL_MULTILIB := 32
 
 LOCAL_CFLAGS += -DUSE_GEN_HW
 LOCAL_CFLAGS += -DDECODE_WITH_GRALLOC_BUFFER
 include $(BUILD_SHARED_LIBRARY)
-# end VP9 SW decode and HW Render
+endif # end VP9 SW decode and HW Render
 
-
+# OMXVideoDecoderMPEG4
 include $(CLEAR_VARS)
 ifeq ($(TARGET_HAS_VPP),true)
 LOCAL_CFLAGS += -DTARGET_HAS_VPP
@@ -223,7 +226,6 @@ LOCAL_SRC_FILES := \
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderMPEG4
-LOCAL_MULTILIB := 32
 ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
 LOCAL_CFLAGS += -DBUF_HEIGHT_ALIGN32
@@ -245,8 +247,10 @@ ifeq ($(USE_SW_MPEG4),true)
 LOCAL_CFLAGS += -DUSE_SW_MPEG4 -DBUF_HEIGHT_ALIGN32
 endif
 
-include $(BUILD_SHARED_LIBRARY)
+include $(BUILD_SHARED_LIBRARY) # OMXVideoDecoderMPEG4
 
+
+# OMXVideoDecoderH263
 include $(CLEAR_VARS)
 ifeq ($(TARGET_HAS_VPP),true)
 LOCAL_CFLAGS += -DTARGET_HAS_VPP
@@ -285,7 +289,6 @@ LOCAL_SRC_FILES := \
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderH263
-LOCAL_MULTILIB := 32
 ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
 LOCAL_CFLAGS += -DBUF_HEIGHT_ALIGN32
@@ -307,8 +310,11 @@ ifeq ($(USE_SW_MPEG4),true)
 LOCAL_CFLAGS += -DUSE_SW_MPEG4
 endif
 
-include $(BUILD_SHARED_LIBRARY)
+include $(BUILD_SHARED_LIBRARY) #OMXVideoDecoderH263
 
+
+# OMXVideoDecoderWMV
+ifneq ($(ENABLE_IMG_GRAPHICS),)
 include $(CLEAR_VARS)
 ifeq ($(TARGET_HAS_VPP),true)
 LOCAL_CFLAGS += -DTARGET_HAS_VPP
@@ -347,7 +353,6 @@ LOCAL_SRC_FILES := \
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderWMV
-LOCAL_MULTILIB := 32
 ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
 LOCAL_CFLAGS += -DBUF_HEIGHT_ALIGN32
@@ -370,8 +375,10 @@ LOCAL_CFLAGS += -DUSE_GEN_HW
 endif
 
 include $(BUILD_SHARED_LIBRARY)
+endif # OMXVideoDecoderWMV
 
 #Build secure AVC video decoder only on supported platforms
+ifneq ($(ENABLE_IMG_GRAPHICS),)
 ifeq ($(USE_INTEL_SECURE_AVC),true)
 
 include $(CLEAR_VARS)
@@ -470,12 +477,13 @@ endif
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderAVCSecure
-LOCAL_MULTILIB := 32
 
 include $(BUILD_SHARED_LIBRARY)
-
+endif
 endif #USE_INTEL_SECURE_AVC
 
+# OMXVideoEncoderAVC
+ifneq ($(ENABLE_IMG_GRAPHICS),)
 include $(CLEAR_VARS)
 ifeq ($(TARGET_HAS_VPP),true)
 LOCAL_CFLAGS += -DTARGET_HAS_VPP
@@ -512,10 +520,11 @@ LOCAL_CFLAGS += $(LOCAL_C_FLAGS)
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoEncoderAVC
-LOCAL_MULTILIB := 32
 include $(BUILD_SHARED_LIBRARY)
+endif #OMXVideoEncoderAVC
 
 
+# OMXVideoEncoderH263
 include $(CLEAR_VARS)
 ifeq ($(TARGET_HAS_VPP),true)
 LOCAL_CFLAGS += -DTARGET_HAS_VPP
@@ -556,9 +565,10 @@ endif
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoEncoderH263
-LOCAL_MULTILIB := 32
-include $(BUILD_SHARED_LIBRARY)
+include $(BUILD_SHARED_LIBRARY) # OMXVideoEncoderH263
 
+
+# OMXVideoEncoderMPEG4
 include $(CLEAR_VARS)
 ifeq ($(TARGET_HAS_VPP),true)
 LOCAL_CFLAGS += -DTARGET_HAS_VPP
@@ -595,9 +605,11 @@ LOCAL_CFLAGS += $(LOCAL_C_FLAGS)
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoEncoderMPEG4
-LOCAL_MULTILIB := 32
-include $(BUILD_SHARED_LIBRARY)
+include $(BUILD_SHARED_LIBRARY) # OMXVideoEncoderMPEG4
 
+
+# OMXVideoDecoderPAVC
+ifneq ($(ENABLE_IMG_GRAPHICS),)
 include $(CLEAR_VARS)
 ifeq ($(TARGET_HAS_VPP),true)
 LOCAL_CFLAGS += -DTARGET_HAS_VPP
@@ -628,7 +640,6 @@ LOCAL_SRC_FILES := \
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoDecoderPAVC
-LOCAL_MULTILIB := 32
 ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
 LOCAL_CFLAGS += -DVED_TILING
 LOCAL_CFLAGS += -DBUF_HEIGHT_ALIGN32
@@ -643,7 +654,11 @@ LOCAL_CFLAGS += -DVED_TILING
 endif
 
 include $(BUILD_SHARED_LIBRARY)
+endif #OMXVideoDecoderPAVC
 
+
+# OMXVideoEncoderVP8
+ifneq ($(ENABLE_IMG_GRAPHICS),)
 include $(CLEAR_VARS)
 ifeq ($(TARGET_HAS_VPP),true)
 LOCAL_CFLAGS += -DTARGET_HAS_VPP
@@ -680,12 +695,12 @@ LOCAL_CFLAGS += $(LOCAL_C_FLAGS)
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoEncoderVP8
-LOCAL_MULTILIB := 32
 include $(BUILD_SHARED_LIBRARY)
+endif #OMXVideoEncoderVP8
 
-ifeq ($(filter $(TARGET_BOARD_PLATFORM),cherrytrail gmin),)
+# OMXVideoPP
+ifneq ($(ENABLE_IMG_GRAPHICS),)
 ifeq ($(TARGET_HAS_MULTIPLE_DISPLAY),true)
-# VPP
 include $(CLEAR_VARS)
 ifeq ($(TARGET_HAS_VPP),true)
 LOCAL_CFLAGS += -DTARGET_HAS_VPP
@@ -730,9 +745,8 @@ LOCAL_CFLAGS += $(LOCAL_C_FLAGS)
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libOMXVideoPP
-LOCAL_MULTILIB := 32
 include $(BUILD_SHARED_LIBRARY)
 endif
-endif
+endif #OMXVideoPP
 
 endif
